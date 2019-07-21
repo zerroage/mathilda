@@ -1,0 +1,67 @@
+[
+  { "keys": ["ctrl+enter"], "command": "worksheet_recalculate","context": [{ "key": "selector", "operator": "equal", "operand": "source.worksheet" }] },
+  { "keys": ["enter"], "command": "worksheet_recalculate", "args": {"new_line": true}, "context": [{ "key": "selector", "operator": "equal", "operand": "source.worksheet" }] },
+  { "keys": ["keypad_enter"], "command": "worksheet_recalculate", "args": {"new_line": true}, "context": [{ "key": "selector", "operator": "equal", "operand": "source.worksheet" }] },
+  { "keys": ["f5"], "command": "worksheet_recalculate","context": [{ "key": "selector", "operator": "equal", "operand": "source.worksheet" }] },
+  { "keys": ["f2"], "command": "list_vars","context": [{ "key": "selector", "operator": "equal", "operand": "source.worksheet" }] },
+
+  { "keys": ["ctrl+/"], "command": "toggle_comment","context": [{ "key": "selector", "operator": "equal", "operand": "source.worksheet" }] },
+  // { "keys": ["ctrl+/"], "command": "insert_snippet", "args": {"contents": "# ${0:$SELECTION}"},"context": [{ "key": "selector", "operator": "equal", "operand": "source.worksheet" }] },
+
+  { "keys": ["keypad_plus"], "command": "insert_snippet", "args": {"contents": "Ans + ${0:$SELECTION}"},"context": [
+    { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
+    { "key": "preceding_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "following_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "selector", "operator": "equal", "operand": "source.worksheet" }]
+  },
+
+  { "keys": ["keypad_minus"], "command": "insert_snippet", "args": {"contents": "Ans - ${0:$SELECTION}"},"context": [
+    { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
+    { "key": "preceding_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "following_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "selector", "operator": "equal", "operand": "source.worksheet" }]
+  },
+
+  { "keys": ["keypad_multiply"], "command": "insert_snippet", "args": {"contents": "Ans * ${0:$SELECTION}"},"context": [
+    { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
+    { "key": "preceding_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "following_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "selector", "operator": "equal", "operand": "source.worksheet" }]
+  },
+
+  { "keys": ["keypad_divide"], "command": "insert_snippet", "args": {"contents": "Ans / ${0:$SELECTION}"},"context": [
+    { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
+    { "key": "preceding_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "following_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "selector", "operator": "equal", "operand": "source.worksheet" }]
+  },
+
+  { "keys": ["+"], "command": "insert_snippet", "args": {"contents": "Ans + ${0:$SELECTION}"},"context": [
+    { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
+    { "key": "preceding_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "following_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "selector", "operator": "equal", "operand": "source.worksheet" }]
+  },
+
+  { "keys": ["-"], "command": "insert_snippet", "args": {"contents": "Ans - ${0:$SELECTION}"},"context": [
+    { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
+    { "key": "preceding_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "following_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "selector", "operator": "equal", "operand": "source.worksheet" }]
+  },
+
+  { "keys": ["*"], "command": "insert_snippet", "args": {"contents": "Ans * ${0:$SELECTION}"},"context": [
+    { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
+    { "key": "preceding_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "following_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "selector", "operator": "equal", "operand": "source.worksheet" }]
+  },
+
+  { "keys": ["/"], "command": "insert_snippet", "args": {"contents": "Ans / ${0:$SELECTION}"},"context": [
+    { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
+    { "key": "preceding_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "following_text", "operator": "regex_match", "operand": " |\t*|\\s*|^|$", "match_all": true },
+    { "key": "selector", "operator": "equal", "operand": "source.worksheet" }]
+  },
+
+]

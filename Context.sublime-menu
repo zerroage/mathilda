@@ -1,0 +1,4 @@
+[
+    { "caption": "Worksheet: Recalculate", "command": "worksheet_recalculate" },
+    { "caption": "Worksheet: Show variables", "command": "list_vars" }
+]
