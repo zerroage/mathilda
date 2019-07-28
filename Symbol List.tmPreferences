@@ -5,7 +5,7 @@
         <key>name</key>
         <string>Symbol List</string>
         <key>scope</key>
-        <string>comment.line.worksheet</string>
+        <string>entity.name.namespace</string>
         <key>settings</key>
         <dict>
             <key>showInSymbolList</key>
