@@ -11,7 +11,14 @@
             <key>showInSymbolList</key>
             <integer>1</integer>
             <key>symbolTransformation</key>
-            <string>s/^\s*\#+\s*([A-Za-z0-9]+.*)$/$1/</string>
+            <string>
+                s/#/\x{3000}/
+                s/#/\x{3000}/
+                s/#/\x{3000}/
+                s/#/\x{3000}/
+                s/#/\x{3000}/                
+                s/#/\x{3000}/                
+            </string>
         </dict>
     </dict>
 </plist>
