@@ -20,6 +20,11 @@ contexts:
       push: answer_line
 
     # Comments begin with a '//' and finish at the end of the line
+    - match: '^\s*#+\s*[a-zA-Z0-9]+.*'
+      scope: punctuation.definition.comment.worksheet
+      push: line_comment_symbol
+
+    # Comments begin with a '//' and finish at the end of the line
     - match: '//|#|;'
       scope: punctuation.definition.comment.worksheet
       push: line_comment
@@ -46,6 +51,11 @@ contexts:
       scope: constant.character.escape.worksheet
     - match: '"'
       scope: punctuation.definition.string.end.worksheet
+      pop: true
+
+  line_comment_symbol:
+    - meta_scope: entity.name.namespace
+    - match: $
       pop: true
 
   line_comment:
