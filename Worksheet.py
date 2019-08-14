@@ -4,7 +4,7 @@ import string
 import traceback
 from collections import OrderedDict
 # noinspection PyUnresolvedReferences
-from fractions import *
+from fractions import Fraction
 # noinspection PyUnresolvedReferences
 from math import *
 from time import gmtime, strftime
@@ -55,6 +55,12 @@ def preprocess_expression(left, right):
 
         # Percent arithmetic: A ± N% transforms to A ± A * (N ÷ 100)
         right = re.sub(r'([+-])\s*([0-9.]+)%', r'*(1\1\2/100)', right)
+
+        # M:N transforms to Fraction(M, N)
+        right = re.sub(r'(\d+):(\d+)', r'Fraction(\1, \2)', right)
+
+        # ::N transforms to Fraction(N)
+        right = re.sub(r'::([0-9.]+)', r'Fraction(\1)', right)
 
     return left, right
 
