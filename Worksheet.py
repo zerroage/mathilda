@@ -44,11 +44,6 @@ def print_answer(view, edit, line, answer):
 
 
 def preprocess_expression(left, right):
-    if left:
-        m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)\(([a-zA-Z0-9_,]+)\)", left)
-        if m:
-            return m.group(1), "lambda " + m.group(2) + " : " + right
-
     if right:
         # Percent arithmetic: A */ N% transforms to A */ (N ÷ 100)
         right = re.sub(r'([*/])\s*([0-9.]+)%', r'\1(\2/100)', right)
@@ -61,6 +56,11 @@ def preprocess_expression(left, right):
 
         # ::N transforms to Fraction(N)
         right = re.sub(r'::([0-9.]+)', r'Fraction(\1)', right)
+
+    if left:
+        m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)\(([a-zA-Z0-9_,]+)\)", left)
+        if m:
+            return m.group(1), "lambda " + m.group(2) + " : " + right
 
     return left, right
 
