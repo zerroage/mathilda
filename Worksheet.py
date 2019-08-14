@@ -1,6 +1,8 @@
+import random
 import re
+import string
 import traceback
-
+from collections import OrderedDict
 # noinspection PyUnresolvedReferences
 from fractions import *
 # noinspection PyUnresolvedReferences
@@ -11,12 +13,6 @@ from time import gmtime, strftime
 import sublime
 # noinspection PyUnresolvedReferences
 import sublime_plugin
-from collections import OrderedDict
-
-# TODO
-# Bug: when there is an 'Answer line' after the current line (maybe even for another expression), expression does not update it's own answer
-# Automatically update 'VARIABLES' when switching to another Worksheet
-# Define functions like f(a, b, c) = : translate internally to lambdas
 
 ANSWER_LINE = "\t\t\tAnswer = "
 ANSWER_PATTERN = "^\\s*Answer\\s*=\\s*.*$"
@@ -30,11 +26,9 @@ def local_vars(view):
     return view.local_vars
 
 
-def myfun(x, y, z):
-    return x ** 2 + y / z
-
-
-mylam = lambda x, y: x / y ** 2
+# From https://stackoverflow.com/a/2257449
+def password(n):
+    return ''.join(random.SystemRandom().choice(string.ascii_letters + string.digits + string.punctuation) for _ in range(n))
 
 
 def print_answer(view, edit, line, answer):
@@ -75,11 +69,13 @@ def calc(view, edit, line):
     if len(line_contents) == 0 or line_contents.startswith((';', '#', "'")) or line_contents.startswith('answer'):
         return None
 
+    # Extract custom function definition
     parts = re.split('=', line_contents)
 
     right_part = parts[0] if len(parts) == 1 else parts[1]
     left_part = None if (len(parts) == 1) else parts[0]
 
+    # Remove end-of-line comment
     right_parts = re.split("[;#']", right_part)
     expr = right_parts[0]
 

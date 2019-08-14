@@ -54,6 +54,7 @@
   {"trigger": "sum", "contents": "sum"},
   {"trigger": "tan", "contents": "tan"},
   {"trigger": "tanh", "contents": "tanh"},
-  {"trigger": "trunc", "contents": "trunc"}
+  {"trigger": "trunc", "contents": "trunc"},
+  {"trigger": "pwd\tpassword(N) return a random password of length N", "contents": "password($0)"}
  ]
 }
