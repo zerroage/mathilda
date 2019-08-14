@@ -49,6 +49,13 @@ def preprocess_expression(left, right):
         if m:
             return m.group(1), "lambda " + m.group(2) + " : " + right
 
+    if right:
+        # Percent arithmetic: A */ N% transforms to A */ (N ÷ 100)
+        right = re.sub(r'([*/])\s*([0-9.]+)%', r'\1(\2/100)', right)
+
+        # Percent arithmetic: A ± N% transforms to A ± A * (N ÷ 100)
+        right = re.sub(r'([+-])\s*([0-9.]+)%', r'*(1\1\2/100)', right)
+
     return left, right
 
 
