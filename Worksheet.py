@@ -58,7 +58,8 @@ def preprocess_expression(left, right):
         right = re.sub(r'(\d+):(\d+)', r'Fraction(\1, \2)', right)
 
         # ::N transforms to Fraction(N)
-        right = re.sub(r'::([0-9.]+)', r'Fraction(\1)', right)
+        right = re.sub(r':::([0-9.]+)', r'Fraction(\1)', right)
+        right = re.sub(r'::([0-9.]+)', r'Fraction(\1).limit_denominator()', right)
 
         # Date arithmetic
         right = re.sub(r'today', 'date.today()', right, flags=re.IGNORECASE)
