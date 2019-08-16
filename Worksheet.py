@@ -8,7 +8,10 @@ from fractions import Fraction
 # noinspection PyUnresolvedReferences
 from math import *
 from time import gmtime, strftime
-
+# noinspection PyUnresolvedReferences
+from datetime import date, datetime, timedelta
+# noinspection PyUnresolvedReferences
+from dateutil.relativedelta import relativedelta
 # noinspection PyUnresolvedReferences
 import sublime
 # noinspection PyUnresolvedReferences
@@ -56,6 +59,17 @@ def preprocess_expression(left, right):
 
         # ::N transforms to Fraction(N)
         right = re.sub(r'::([0-9.]+)', r'Fraction(\1)', right)
+
+        # Date arithmetic
+        right = re.sub(r'today', 'date.today()', right, flags=re.IGNORECASE)
+        right = re.sub(r'now', 'datetime.today()', right, flags=re.IGNORECASE)
+        right = re.sub(r'(\d+)\s*second(s)?', r'timedelta(seconds = \1)', right, flags=re.IGNORECASE)
+        right = re.sub(r'(\d+)\s*minute(s)?', r'timedelta(minutes = \1)', right, flags=re.IGNORECASE)
+        right = re.sub(r'(\d+)\s*hour(s)?', r'timedelta(hours = \1)', right, flags=re.IGNORECASE)
+        right = re.sub(r'(\d+)\s*day(s)?', r'timedelta(days = \1)', right, flags=re.IGNORECASE)
+        right = re.sub(r'(\d+)\s*week(s)?', r'timedelta(weeks = \1)', right, flags=re.IGNORECASE)
+        right = re.sub(r'(\d+)\s*month(s)?', r'relativedelta(months = \1)', right, flags=re.IGNORECASE)
+        right = re.sub(r'(\d+)\s*year(s)?', r'relativedelta(years = \1)', right, flags=re.IGNORECASE)
 
     if left:
         m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)\(([a-zA-Z0-9_,]+)\)", left)
