@@ -112,6 +112,11 @@ def preprocess_expression(left, right):
         right = re.sub(r'(\d+)\s*month(s)?', r'relativedelta(months = \1)', right, flags=re.IGNORECASE)
         right = re.sub(r'(\d+)\s*year(s)?', r'relativedelta(years = \1)', right, flags=re.IGNORECASE)
 
+        # answers stack
+        right = re.sub(r'@(\d+)', r'(stack[\1] if len(stack) > \1 else 0)', right)
+        right = re.sub('@@', 'stack', right)
+        right = re.sub('@', 'ans', right)
+
     if left:
         m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)\(([a-zA-Z0-9_,]+)\)", left)
         if m:
@@ -152,6 +157,7 @@ def calc(view, edit, line):
         answer = eval(expr, globals(), local_vars(view))
 
         local_vars(view)['ans'] = answer
+        local_vars(view)['stack'].insert(0, answer)
         if var:
             local_vars(view)[var] = answer
 
@@ -188,6 +194,7 @@ class WorksheetRecalculateCommand(sublime_plugin.TextCommand):
     def run(self, edit, new_line=False):
         self.update_view_name(edit)
         local_vars(self.view).clear()
+        local_vars(self.view)['stack'] = []
 
         point = 0
         limit = 0
