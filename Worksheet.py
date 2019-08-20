@@ -1,3 +1,4 @@
+import itertools
 import random
 import re
 import string
@@ -37,9 +38,40 @@ def prod(iterable):
     return reduce(operator.mul, iterable, 1)
 
 
+# Password generation functions
+
+
 # From https://stackoverflow.com/a/2257449
 def password(n):
     return ''.join(random.SystemRandom().choice(string.ascii_letters + string.digits + string.punctuation) for _ in range(n))
+
+
+# From https://stackoverflow.com/a/5502875
+def gibberish(wordcount):
+    initial_consonants = (set(string.ascii_lowercase) - set('aeiou')
+                          # remove those easily confused with others
+                          - set('qxc')
+                          # add some crunchy clusters
+                          | {'bl', 'br', 'cl', 'cr', 'dr', 'fl', 'fr', 'gl', 'gr', 'pl', 'pr', 'sk', 'sl', 'sm', 'sn', 'sp', 'st', 'str',
+                             'sw', 'tr'}
+                          )
+
+    final_consonants = (set(string.ascii_lowercase) - set('aeiou')
+                        # confusable
+                        - set('qxcsj')
+                        # crunchy clusters
+                        | {'ct', 'ft', 'mp', 'nd', 'ng', 'nk', 'nt', 'pt', 'sk', 'sp', 'ss', 'st', 'oy', 'ji', 'ch', 'ee', 'zz', 'fj', 'tz'}
+                        )
+
+    # oy, ji, ch, ee, zz, fj, and tz
+
+    vowels = 'aeiou'  # we'll keep this simple
+
+    # each syllable is consonant-vowel-consonant "pronounceable"
+    syllables = map(''.join, itertools.product(initial_consonants, vowels, final_consonants))
+
+    # you could trow in number combinations, maybe capitalized versions...
+    return ' '.join(random.sample(list(syllables), wordcount))
 
 
 def print_answer(view, edit, line, answer):

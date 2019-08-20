@@ -55,6 +55,7 @@
   {"trigger": "tan", "contents": "tan"},
   {"trigger": "tanh", "contents": "tanh"},
   {"trigger": "trunc", "contents": "trunc"},
-  {"trigger": "pwd\tpassword(N) return a random password of length N", "contents": "password($0)"}
+  {"trigger": "pwd\tpassword(N) return a random password of length N", "contents": "password($0)"},
+  {"trigger": "gibberish\tgibberish(N) return a random pronounceable password of length N", "contents": "gibberish($0)"}
  ]
 }
