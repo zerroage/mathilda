@@ -4,14 +4,15 @@ import string
 import traceback
 from collections import OrderedDict
 # noinspection PyUnresolvedReferences
+from datetime import date, datetime, timedelta
+# noinspection PyUnresolvedReferences
+from dateutil.relativedelta import relativedelta
+# noinspection PyUnresolvedReferences
 from fractions import Fraction
 # noinspection PyUnresolvedReferences
 from math import *
 from time import gmtime, strftime
-# noinspection PyUnresolvedReferences
-from datetime import date, datetime, timedelta
-# noinspection PyUnresolvedReferences
-from dateutil.relativedelta import relativedelta
+from functools import reduce
 # noinspection PyUnresolvedReferences
 import sublime
 # noinspection PyUnresolvedReferences
@@ -27,6 +28,13 @@ def local_vars(view):
         view.local_vars = OrderedDict()
 
     return view.local_vars
+
+# Useful math functions
+
+
+def prod(iterable):
+    import operator
+    return reduce(operator.mul, iterable, 1)
 
 
 # From https://stackoverflow.com/a/2257449
