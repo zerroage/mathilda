@@ -33,6 +33,16 @@ def local_vars(view):
 # Useful math functions
 
 
+def mean(numbers):
+    return float(sum(numbers)) / max(len(numbers), 1)
+
+
+def median(numbers):
+    n = len(numbers)
+    s = sorted(numbers)
+    return (sum(s[n//2-1:n//2+1])/2.0, s[n//2])[n % 2] if n else None
+
+
 def prod(iterable):
     import operator
     return reduce(operator.mul, iterable, 1)
