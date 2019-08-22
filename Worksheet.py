@@ -114,8 +114,8 @@ def preprocess_expression(left, right):
         # Date arithmetic
         right = re.sub(r'today', 'date.today()', right, flags=re.IGNORECASE)
         right = re.sub(r'now', 'datetime.today()', right, flags=re.IGNORECASE)
-        right = re.sub(r'(\d+)\s*second(s)?', r'timedelta(seconds = \1)', right, flags=re.IGNORECASE)
-        right = re.sub(r'(\d+)\s*minute(s)?', r'timedelta(minutes = \1)', right, flags=re.IGNORECASE)
+        right = re.sub(r'(\d+)\s*sec(ond(s)?)?', r'timedelta(seconds = \1)', right, flags=re.IGNORECASE)
+        right = re.sub(r'(\d+)\s*min(ute(s)?)?', r'timedelta(minutes = \1)', right, flags=re.IGNORECASE)
         right = re.sub(r'(\d+)\s*hour(s)?', r'timedelta(hours = \1)', right, flags=re.IGNORECASE)
         right = re.sub(r'(\d+)\s*day(s)?', r'timedelta(days = \1)', right, flags=re.IGNORECASE)
         right = re.sub(r'(\d+)\s*week(s)?', r'timedelta(weeks = \1)', right, flags=re.IGNORECASE)
@@ -139,6 +139,8 @@ def postprocess_answer(var, expr, answer):
     txt = str(answer) if answer else ""
     if "<function <lambda" in txt:
         return expr
+
+    answer = re.sub(', 0:00:00', '', txt)
 
     return answer
 
