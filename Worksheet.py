@@ -140,7 +140,7 @@ def preprocess_expression(left, right, view):
 
 
 def postprocess_answer(var, expr, answer):
-    txt = str(answer) if answer else ""
+    txt = str(answer) if answer is not None else ""
     if "<function <lambda" in txt:
         return expr
 
