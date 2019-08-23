@@ -19,6 +19,9 @@ import sublime
 # noinspection PyUnresolvedReferences
 import sublime_plugin
 
+INTERNAL_VAR_PREFIX = "__"
+STACK_NAME_INTERNAL_VAR = INTERNAL_VAR_PREFIX + 'stack_name'
+
 ANSWER_LINE = "\t\t\tAnswer = "
 ANSWER_PATTERN = "^\\s*Answer\\s*=\\s*.*$"
 CR_LF = "\n"
@@ -96,7 +99,7 @@ def print_answer(view, edit, line, answer):
         view.insert(edit, line.end(), CR_LF + ans_text)
 
 
-def preprocess_expression(left, right):
+def preprocess_expression(left, right, view):
     if right:
         # Percent arithmetic: A */ N% transforms to A */ (N ÷ 100)
         right = re.sub(r'([*/])\s*([0-9.]+)%', r'\1(\2/100)', right)
@@ -123,8 +126,9 @@ def preprocess_expression(left, right):
         right = re.sub(r'(\d+)\s*year(s)?', r'relativedelta(years = \1)', right, flags=re.IGNORECASE)
 
         # answers stack
-        right = re.sub(r'@(\d+)', r'(stack[\1] if len(stack) > \1 else 0)', right)
-        right = re.sub('@@', 'stack', right)
+        stack_name = local_vars(view)[STACK_NAME_INTERNAL_VAR]
+        right = re.sub(r'@(\d+)', r'({0}[\1] if len({0}) > \1 else 0)'.format(stack_name), right)
+        right = re.sub('@@', stack_name, right)
         right = re.sub('@', 'ans', right)
 
     if left:
@@ -154,6 +158,14 @@ def calc(view, edit, line):
     if len(line_contents) == 0 or line_contents.startswith((';', '#', "'")) or line_contents.startswith('answer'):
         return None
 
+    # Create new stack
+    m = re.match(r'^\s*@([a-zA-Z][a-zA-Z0-9_]*)\s*$', line_contents)
+    if m:
+        stack_name = m.group(1)
+        local_vars(view)[STACK_NAME_INTERNAL_VAR] = stack_name
+        local_vars(view)[stack_name] = []
+        return False
+
     # Extract custom function definition
     parts = re.split('=', line_contents)
 
@@ -165,11 +177,13 @@ def calc(view, edit, line):
     expr = right_parts[0]
 
     try:
-        (var, expr) = preprocess_expression(left_part, expr)
+        (var, expr) = preprocess_expression(left_part, expr, view)
         answer = eval(expr, globals(), local_vars(view))
 
+        stack_name = local_vars(view)[STACK_NAME_INTERNAL_VAR]
+
         local_vars(view)['ans'] = answer
-        local_vars(view)['stack'].insert(0, answer)
+        local_vars(view)[stack_name].insert(0, answer)
         if var:
             local_vars(view)[var] = answer
 
@@ -189,7 +203,8 @@ def update_vars(view, edit):
         panel.erase(edit, sublime.Region(0, panel.size()))
         panel.insert(edit, panel.size(), "VARIABLES\n" + "-" * 35 + "\n")
         for k in local_vars(view):
-            panel.insert(edit, panel.size(), "{0:16}{1}\n".format(k, local_vars(view)[k]))
+            if not str(k).startswith(INTERNAL_VAR_PREFIX):
+                panel.insert(edit, panel.size(), "{0:16}{1}\n".format(k, local_vars(view)[k]))
 
 
 class WorksheetRecalculateCommand(sublime_plugin.TextCommand):
@@ -206,7 +221,8 @@ class WorksheetRecalculateCommand(sublime_plugin.TextCommand):
     def run(self, edit, new_line=False):
         self.update_view_name(edit)
         local_vars(self.view).clear()
-        local_vars(self.view)['stack'] = []
+        local_vars(self.view)['__stack_name'] = "__stack"
+        local_vars(self.view)['__stack'] = []
 
         point = 0
         limit = 0

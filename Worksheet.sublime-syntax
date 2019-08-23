@@ -33,6 +33,9 @@ contexts:
     - match: '='
       scope: punctuation.definition.worksheet
 
+    - match: '^\s*@[a-zA-Z][a-zA-Z0-9_]+\s*$'
+      scope: markup.raw.block.worksheet
+
     # Keywords are if, else for and while.
     # Note that blackslashes don't need to be escaped within single quoted
     # strings in YAML. When using single quoted strings, only single quotes
