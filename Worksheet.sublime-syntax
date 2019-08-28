@@ -41,8 +41,11 @@ contexts:
     # strings in YAML. When using single quoted strings, only single quotes
     # need to be escaped: this is done by using two single quotes next to each
     # other.
-    - match: '\b(round|abs|complex|bin|oct|min|max|range|sum|float|ceil|copysign|fabs|factorial|floor|fmod|frexp|fsum|gcd|isclose|isfinite|isinf|isnan|ldexp|modf|trunc|exp|expm1|log|log1p|log2|log10|pow|pow|sqrt|acos|asin|atan|atan2|cos|hypot|sin|tan|degrees|radians|acosh|asinh|atanh|cosh|sinh|tanh|erf|erfc|gamma|lgamma|pi|e|ans|Ans|ANS|password|gibberish)\b'
+    - match: '\b(round|abs|complex|bin|oct|min|max|range|sum|float|ceil|copysign|fabs|factorial|floor|fmod|frexp|fsum|gcd|isclose|isfinite|isinf|isnan|ldexp|modf|trunc|exp|expm1|log|log1p|log2|log10|pow|pow|sqrt|acos|asin|atan|atan2|cos|hypot|sin|tan|degrees|radians|acosh|asinh|atanh|cosh|sinh|tanh|erf|erfc|gamma|lgamma|pi|e|ans|Ans|ANS|password|gibberish|date)\b'
       scope: keyword.control.worksheet
+
+    - match: '\b(day|days|month|months|week|weeks|year|years|min|minute|minutes|hour|hours|sec|second|seconds|today|now)\b'
+      scope: variable.language.worksheet
 
     # Numbers
     - match: '\b(-)?[0-9.]+\b'

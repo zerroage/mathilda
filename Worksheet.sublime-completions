@@ -56,6 +56,25 @@
   {"trigger": "tanh", "contents": "tanh"},
   {"trigger": "trunc", "contents": "trunc"},
   {"trigger": "pwd\tpassword(N) return a random password of length N", "contents": "password($0)"},
-  {"trigger": "gibberish\tgibberish(N) return a random pronounceable password of length N", "contents": "gibberish($0)"}
+  {"trigger": "gibberish\tgibberish(N) return a random pronounceable password of length N", "contents": "gibberish($0)"},
+  {"trigger": "date", "contents": "date"},
+  {"trigger": "day", "contents": "day"},
+  {"trigger": "days", "contents": "days"},
+  {"trigger": "month", "contents": "month"},
+  {"trigger": "months", "contents": "months"},
+  {"trigger": "week", "contents": "week"},
+  {"trigger": "weeks", "contents": "weeks"},
+  {"trigger": "year", "contents": "year"},
+  {"trigger": "years", "contents": "years"},
+  {"trigger": "min", "contents": "min"},
+  {"trigger": "minute", "contents": "minute"},
+  {"trigger": "minutes", "contents": "minutes"},
+  {"trigger": "hour", "contents": "hour"},
+  {"trigger": "hours", "contents": "hours"},
+  {"trigger": "sec", "contents": "sec"},
+  {"trigger": "second", "contents": "second"},
+  {"trigger": "seconds", "contents": "seconds"},
+  {"trigger": "today", "contents": "today"},
+  {"trigger": "now", "contents": "now"}
  ]
 }
