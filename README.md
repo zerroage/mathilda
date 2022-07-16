@@ -136,6 +136,63 @@ c(10, 5)
 
 It's allowed to use built-in functions inside a custom function definition. Defining custom functions based on another custom functions is not supported.
 
+### Named stacks
+
+A worksheet may contain several named stacks. A named stack starts with the `@` character followed by a stack name. 
+All calculations within the stack are collected into an array with the variable name corresponding to the stack name. Elements of this array can be accessed using the `[n]` syntax, or the variable can be passed to a function with an array argument (`sum()` or `prod()`).
+
+First stack element (with index 0) is always the last answer. Second stack element (with index 1) is the previous answer, etc. 
+
+Example:
+
+```
+; open a new stack
+@mystack
+@mystack
+
+var1 = 1
+			Answer = 1
+var2 = 3.14
+			Answer = 3.14
+; access stack items: mystack[0] is the last answer, mystack[1] is previous answer
+mystack[0] + mystack[1]
+			Answer = 4.140000000000001
+; previous answer has been put onto the stack too, so `sum()` returns sum of all items previous items
+sum(mystack)
+			Answer = 8.280000000000001
+
+```
+
+### Anynymous stacks
+
+By default an anonymous stack is created for the entire worksheet.
+
+The `@@` variable references to the entire stack, it can be passed to a function with an array argument, e.g. `sum(@@)` or `prod(@@)`.
+
+It's also possible to access stack elements: 
+* `@` references to the last answer
+* `@0` references to the last answer stack item, i.e. the last answer
+* `@1` references to the 1-st answer stack item
+* `@2` references to the 2-nd answer stack item
+* `@N` references to the N-th answer stack item
+
+Example:
+
+```
+1
+			Answer = 1
+2
+			Answer = 2
+3
+			Answer = 3
+sum(@@)
+			Answer = 6
+; accessing the 4-th element of the (zero-based) stack
+@3
+			Answer = 1
+
+```
+
 ### Comments
 
 ```
