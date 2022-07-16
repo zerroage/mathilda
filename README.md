@@ -148,7 +148,6 @@ Example:
 ```
 ; open a new stack
 @mystack
-@mystack
 
 var1 = 1
 			Answer = 1
@@ -190,7 +189,6 @@ sum(@@)
 ; accessing the 4-th element of the (zero-based) stack
 @3
 			Answer = 1
-
 ```
 
 ### Comments
