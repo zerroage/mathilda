@@ -1,4 +1,4 @@
-# sublime-calc
+# Mathilda - a fancy SublimeText calculator plugin
 
 This SublimeText3 plugin is inspired by the [SpeQ Mathematics](https://www.speqmath.com/) application.
 It transforms your SublimeText editor into a powerful calculator/worksheet.

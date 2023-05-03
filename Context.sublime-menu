@@ -1,4 +1,4 @@
 [
-    { "caption": "Worksheet: Recalculate", "command": "worksheet_recalculate" },
-    { "caption": "Worksheet: Show variables", "command": "list_vars" }
+    { "caption": "Mathilda: Recalculate entire worksheet", "command": "recalculate_worksheet" },
+    { "caption": "Mathilda: Show variables", "command": "list_vars" }
 ]

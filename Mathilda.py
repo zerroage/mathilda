@@ -207,7 +207,7 @@ def update_vars(view, edit):
                 panel.insert(edit, panel.size(), "{0:16}{1}\n".format(k, local_vars(view)[k]))
 
 
-class WorksheetRecalculateCommand(sublime_plugin.TextCommand):
+class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
 
     def update_view_name(self, edit):
 

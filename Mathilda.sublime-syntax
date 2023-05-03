@@ -4,37 +4,38 @@
 file_extensions:
   - worksheet
   - calc
-scope: source.worksheet
+  - math
+scope: source.mathilda
 contexts:
   main:
     # Strings begin and end with quotes, and use backslashes as an escape
     # character
     - match: '"'
-      scope: punctuation.definition.string.begin.worksheet
+      scope: punctuation.definition.string.begin.mathilda
       push: double_quoted_string
 
 
     # Answer lines contain the word 'Answer ' followed by = or : symbol
     - match: 'Ans(wer)?\s*[=:]'
-      scope: punctuation.definition.comment.worksheet
+      scope: punctuation.definition.comment.mathilda
       push: answer_line
 
     # Comments begin with a '//' and finish at the end of the line
     - match: '^\s*#+\s*[a-zA-Z0-9]+.*'
-      scope: punctuation.definition.comment.worksheet
+      scope: punctuation.definition.comment.mathilda
       push: line_comment_symbol
 
     # Comments begin with a '//' and finish at the end of the line
     - match: '//|#|;'
-      scope: punctuation.definition.comment.worksheet
+      scope: punctuation.definition.comment.mathilda
       push: line_comment
 
     # Answer lines contain the word 'Answer ' followed by = or : symbol
     - match: '='
-      scope: punctuation.definition.worksheet
+      scope: punctuation.definition.mathilda
 
     - match: '^\s*@[a-zA-Z][a-zA-Z0-9_]+\s*$'
-      scope: markup.raw.block.worksheet
+      scope: markup.raw.block.mathilda
 
     # Keywords are if, else for and while.
     # Note that blackslashes don't need to be escaped within single quoted
@@ -42,21 +43,21 @@ contexts:
     # need to be escaped: this is done by using two single quotes next to each
     # other.
     - match: '\b(round|abs|complex|bin|oct|min|max|range|sum|float|ceil|copysign|fabs|factorial|floor|fmod|frexp|fsum|gcd|isclose|isfinite|isinf|isnan|ldexp|modf|trunc|exp|expm1|log|log1p|log2|log10|pow|pow|sqrt|acos|asin|atan|atan2|cos|hypot|sin|tan|degrees|radians|acosh|asinh|atanh|cosh|sinh|tanh|erf|erfc|gamma|lgamma|pi|e|ans|Ans|ANS|password|gibberish|date)\b'
-      scope: keyword.control.worksheet
+      scope: keyword.control.mathilda
 
     - match: '\b(day|days|month|months|week|weeks|year|years|min|minute|minutes|hour|hours|sec|second|seconds|today|now)\b'
-      scope: variable.language.worksheet
+      scope: variable.language.mathilda
 
     # Numbers
     - match: '\b(-)?[0-9.]+\b'
-      scope: constant.numeric.worksheet
+      scope: constant.numeric.mathilda
 
   double_quoted_string:
-    - meta_scope: string.quoted.double.worksheet
+    - meta_scope: string.quoted.double.mathilda
     - match: '\\.'
-      scope: constant.character.escape.worksheet
+      scope: constant.character.escape.mathilda
     - match: '"'
-      scope: punctuation.definition.string.end.worksheet
+      scope: punctuation.definition.string.end.mathilda
       pop: true
 
   line_comment_symbol:
@@ -65,12 +66,12 @@ contexts:
       pop: true
 
   line_comment:
-    - meta_scope: comment.line.worksheet
+    - meta_scope: comment.line.mathilda
     - match: $
       pop: true
 
   answer_line:
-    - meta_scope: comment.answer.worksheet
+    - meta_scope: comment.answer.mathilda
     # - meta_scope: markup.underline.link
     - match: $
       pop: true

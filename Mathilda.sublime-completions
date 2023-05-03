@@ -1,5 +1,5 @@
 {
- "scope": "source.worksheet",
+ "scope": "source.mathilda",
  "completions": [
   {"trigger": "abs", "contents": "abs(${1:arg})"},
   {"trigger": "acos", "contents": "acos(${1:arg})"},
