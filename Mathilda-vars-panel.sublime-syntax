@@ -1,0 +1,15 @@
+%YAML 1.2
+---
+scope: source.mathilda.vars
+hidden: true
+contexts:
+  main:
+    - match: 'VARIABLES|^-{5,}'
+      scope: entity.name.namespace.mathilda.vars
+
+    - match: '^\@\w+.*'
+      scope: markup.raw.block.mathilda.vars
+
+    - match: '\b(-)?[0-9.]+\b'
+      scope: constant.numeric.mathilda.vars
+

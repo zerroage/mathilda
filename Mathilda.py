@@ -220,6 +220,7 @@ def update_vars(view, edit):
     if panel:
         vars_map = build_vars_map(local_vars(view))
         panel.erase(edit, sublime.Region(0, panel.size()))
+        panel.assign_syntax("Mathilda-vars-panel.sublime-syntax")
         panel.insert(edit, panel.size(), str(vars_map))
 
 
