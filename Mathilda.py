@@ -197,14 +197,30 @@ def calc(view, edit, line):
 
 
 def update_vars(view, edit):
+    
+    def build_vars_map(vars):
+        vars_map = {}
+        for k in vars:
+            if not str(k).startswith(INTERNAL_VAR_PREFIX):
+                if isinstance(vars[k], list):
+                    vars_map["@" + k] = "<Stack of %d item(s)>" % len(vars[k])
+                else:
+                    vars_map[k] = vars[k]
+        max_var_name_len = max(list(map(lambda x: len(str(x)), vars_map.keys())))
+        max_var_value_len = max(list(map(lambda x: len(str(x)), vars_map.values())))
+        
+        table = "VARIABLES\n" + "-" * (max_var_name_len + max_var_value_len + 3) + "\n"
+        for k, v in vars_map.items():
+            table += "" + str(k).ljust(max_var_name_len) + " : " + str(v).ljust(max_var_value_len) + "\n"
+        
+        return table
+    
     panel = view.window().find_output_panel("local_vars")
 
     if panel:
+        vars_map = build_vars_map(local_vars(view))
         panel.erase(edit, sublime.Region(0, panel.size()))
-        panel.insert(edit, panel.size(), "VARIABLES\n" + "-" * 35 + "\n")
-        for k in local_vars(view):
-            if not str(k).startswith(INTERNAL_VAR_PREFIX):
-                panel.insert(edit, panel.size(), "{0:16}{1}\n".format(k, local_vars(view)[k]))
+        panel.insert(edit, panel.size(), str(vars_map))
 
 
 class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
