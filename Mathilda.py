@@ -225,6 +225,9 @@ def update_vars(view, edit):
 
 
 class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
+    
+    def is_visible(self):
+        return "Mathilda" in self.view.settings ().get ("syntax")
 
     def update_view_name(self, edit):
 
@@ -273,6 +276,9 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
 
 
 class ToggleCommentCommand(sublime_plugin.TextCommand):
+    
+    def is_visible(self):
+        return "Mathilda" in self.view.settings ().get ("syntax")
 
     def run(self, edit):
         for region in self.view.sel():
@@ -291,6 +297,9 @@ class ToggleCommentCommand(sublime_plugin.TextCommand):
 
 
 class ListVarsCommand(sublime_plugin.TextCommand):
+
+    def is_visible(self):
+        return "Mathilda" in self.view.settings ().get ("syntax")
 
     def run(self, edit):
         self.view.window().create_output_panel("local_vars")
