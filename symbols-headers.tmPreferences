@@ -3,7 +3,7 @@
 <plist version="1.0">
     <dict>
         <key>name</key>
-        <string>Symbol List</string>
+        <string>Header symbols</string>
         <key>scope</key>
         <string>entity.name.namespace</string>
         <key>settings</key>
