@@ -4,20 +4,15 @@ import re
 import string
 import traceback
 from collections import OrderedDict
-# noinspection PyUnresolvedReferences
 from datetime import date, datetime, timedelta
-# noinspection PyUnresolvedReferences
-from dateutil.relativedelta import relativedelta
-# noinspection PyUnresolvedReferences
 from fractions import Fraction
-# noinspection PyUnresolvedReferences
+from functools import reduce
 from math import *
 from time import gmtime, strftime
-from functools import reduce
-# noinspection PyUnresolvedReferences
+
 import sublime
-# noinspection PyUnresolvedReferences
 import sublime_plugin
+from dateutil.relativedelta import relativedelta
 
 INTERNAL_VAR_PREFIX = "__"
 STACK_NAME_INTERNAL_VAR = INTERNAL_VAR_PREFIX + 'stack_name'
@@ -43,7 +38,7 @@ def mean(numbers):
 def median(numbers):
     n = len(numbers)
     s = sorted(numbers)
-    return (sum(s[n//2-1:n//2+1])/2.0, s[n//2])[n % 2] if n else None
+    return (sum(s[n // 2 - 1:n // 2 + 1]) / 2.0, s[n // 2])[n % 2] if n else None
 
 
 def prod(iterable):
@@ -197,7 +192,7 @@ def calc(view, edit, line):
 
 
 def update_vars(view, edit):
-    
+
     def build_vars_map(vars):
         vars_map = {}
         for k in vars:
@@ -208,13 +203,13 @@ def update_vars(view, edit):
                     vars_map[k] = vars[k]
         max_var_name_len = max(list(map(lambda x: len(str(x)), vars_map.keys())))
         max_var_value_len = max(list(map(lambda x: len(str(x)), vars_map.values())))
-        
+
         table = "VARIABLES\n" + "-" * (max_var_name_len + max_var_value_len + 3) + "\n"
         for k, v in vars_map.items():
             table += "" + str(k).ljust(max_var_name_len) + " : " + str(v).ljust(max_var_value_len) + "\n"
-        
+
         return table
-    
+
     panel = view.window().find_output_panel("local_vars")
 
     if panel:
@@ -225,9 +220,9 @@ def update_vars(view, edit):
 
 
 class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
-    
+
     def is_visible(self):
-        return "Mathilda" in self.view.settings ().get ("syntax")
+        return "Mathilda" in self.view.settings().get("syntax")
 
     def update_view_name(self, edit):
 
@@ -276,9 +271,9 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
 
 
 class ToggleCommentCommand(sublime_plugin.TextCommand):
-    
+
     def is_visible(self):
-        return "Mathilda" in self.view.settings ().get ("syntax")
+        return "Mathilda" in self.view.settings().get("syntax")
 
     def run(self, edit):
         for region in self.view.sel():
@@ -299,7 +294,7 @@ class ToggleCommentCommand(sublime_plugin.TextCommand):
 class ListVarsCommand(sublime_plugin.TextCommand):
 
     def is_visible(self):
-        return "Mathilda" in self.view.settings ().get ("syntax")
+        return "Mathilda" in self.view.settings().get("syntax")
 
     def run(self, edit):
         self.view.window().create_output_panel("local_vars")
