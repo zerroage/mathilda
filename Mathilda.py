@@ -160,6 +160,50 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
 
         self.view.set_status('worksheet', "Updated worksheet at " + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
+    def calc(self, view, edit, line):
+        line_contents = view.substr(line).lower()
+        line_contents = re.sub('\\s+', '', line_contents)
+
+        if len(line_contents) == 0 or line_contents.startswith((';', '#', "'")) or line_contents.startswith('answer'):
+            return None
+
+        # Create new stack
+        m = re.match(r'^\s*@([a-zA-Z][a-zA-Z0-9_]*)\s*$', line_contents)
+        if m:
+            stack_name = m.group(1)
+            local_vars(view)[STACK_NAME_INTERNAL_VAR] = stack_name
+            local_vars(view)[stack_name] = []
+            return False
+
+        # Extract custom function definition
+        parts = re.split('=', line_contents)
+
+        right_part = parts[0] if len(parts) == 1 else parts[1]
+        left_part = None if (len(parts) == 1) else parts[0]
+
+        # Remove end-of-line comment
+        right_parts = re.split("[;#']", right_part)
+        expr = right_parts[0]
+
+        try:
+            (var, expr) = self.preprocess_expression(left_part, expr, view)
+            answer = eval(expr, globals(), local_vars(view))
+
+            stack_name = local_vars(view)[STACK_NAME_INTERNAL_VAR]
+
+            local_vars(view)['ans'] = answer
+            local_vars(view)[stack_name].insert(0, answer)
+            if var:
+                local_vars(view)[var] = answer
+
+            return self.postprocess_answer(var, expr, answer)
+        except Exception as ex:
+            print(traceback.format_exc())
+            view.show_popup("<b>Error</b><br>" + str(ex), sublime.HIDE_ON_MOUSE_MOVE_AWAY)
+            return None
+        finally:
+            update_vars(view, edit)
+
     def print_answer(self, view, edit, line, answer):
         if not answer:
             return
@@ -218,50 +262,6 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
         answer = re.sub(', 0:00:00', '', txt)
 
         return answer
-
-    def calc(self, view, edit, line):
-        line_contents = view.substr(line).lower()
-        line_contents = re.sub('\\s+', '', line_contents)
-
-        if len(line_contents) == 0 or line_contents.startswith((';', '#', "'")) or line_contents.startswith('answer'):
-            return None
-
-        # Create new stack
-        m = re.match(r'^\s*@([a-zA-Z][a-zA-Z0-9_]*)\s*$', line_contents)
-        if m:
-            stack_name = m.group(1)
-            local_vars(view)[STACK_NAME_INTERNAL_VAR] = stack_name
-            local_vars(view)[stack_name] = []
-            return False
-
-        # Extract custom function definition
-        parts = re.split('=', line_contents)
-
-        right_part = parts[0] if len(parts) == 1 else parts[1]
-        left_part = None if (len(parts) == 1) else parts[0]
-
-        # Remove end-of-line comment
-        right_parts = re.split("[;#']", right_part)
-        expr = right_parts[0]
-
-        try:
-            (var, expr) = self.preprocess_expression(left_part, expr, view)
-            answer = eval(expr, globals(), local_vars(view))
-
-            stack_name = local_vars(view)[STACK_NAME_INTERNAL_VAR]
-
-            local_vars(view)['ans'] = answer
-            local_vars(view)[stack_name].insert(0, answer)
-            if var:
-                local_vars(view)[var] = answer
-
-            return self.postprocess_answer(var, expr, answer)
-        except Exception as ex:
-            print(traceback.format_exc())
-            view.show_popup("<b>Error</b><br>" + str(ex), sublime.HIDE_ON_MOUSE_MOVE_AWAY)
-            return None
-        finally:
-            update_vars(view, edit)
 
 
 class ToggleCommentCommand(sublime_plugin.TextCommand):
