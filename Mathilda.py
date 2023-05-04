@@ -82,115 +82,6 @@ def gibberish(wordcount):
     return ' '.join(random.sample(list(syllables), wordcount))
 
 
-def print_answer(view, edit, line, answer):
-    if not answer:
-        return
-
-    ans_line = view.find(ANSWER_PATTERN, line.end() + 1)
-    ans_text = ANSWER_LINE + str(answer)
-    if ans_line is not None and 0 < ans_line.begin() <= line.end() + 1:
-        view.replace(edit, ans_line, ans_text)
-    else:
-        view.insert(edit, line.end(), CR_LF + ans_text)
-
-
-def preprocess_expression(left, right, view):
-    if right:
-        # Percent arithmetic: A */ N% transforms to A */ (N ÷ 100)
-        right = re.sub(r'([*/])\s*([0-9.]+)%', r'\1(\2/100)', right)
-
-        # Percent arithmetic: A ± N% transforms to A ± A * (N ÷ 100)
-        right = re.sub(r'([+-])\s*([0-9.]+)%', r'*(1\1\2/100)', right)
-
-        # M:N transforms to Fraction(M, N)
-        right = re.sub(r'(\d+):(\d+)', r'Fraction(\1, \2)', right)
-
-        # ::N transforms to Fraction(N)
-        right = re.sub(r':::([0-9.]+)', r'Fraction(\1)', right)
-        right = re.sub(r'::([0-9.]+)', r'Fraction(\1).limit_denominator()', right)
-
-        # Date arithmetic
-        right = re.sub(r'today', 'date.today()', right, flags=re.IGNORECASE)
-        right = re.sub(r'now', 'datetime.today()', right, flags=re.IGNORECASE)
-        right = re.sub(r'(\d+)\s*sec(ond(s)?)?', r'timedelta(seconds = \1)', right, flags=re.IGNORECASE)
-        right = re.sub(r'(\d+)\s*min(ute(s)?)?', r'timedelta(minutes = \1)', right, flags=re.IGNORECASE)
-        right = re.sub(r'(\d+)\s*hour(s)?', r'timedelta(hours = \1)', right, flags=re.IGNORECASE)
-        right = re.sub(r'(\d+)\s*day(s)?', r'timedelta(days = \1)', right, flags=re.IGNORECASE)
-        right = re.sub(r'(\d+)\s*week(s)?', r'timedelta(weeks = \1)', right, flags=re.IGNORECASE)
-        right = re.sub(r'(\d+)\s*month(s)?', r'relativedelta(months = \1)', right, flags=re.IGNORECASE)
-        right = re.sub(r'(\d+)\s*year(s)?', r'relativedelta(years = \1)', right, flags=re.IGNORECASE)
-
-        # answers stack
-        stack_name = local_vars(view)[STACK_NAME_INTERNAL_VAR]
-        right = re.sub(r'@(\d+)', r'({0}[\1] if len({0}) > \1 else 0)'.format(stack_name), right)
-        right = re.sub('@@', stack_name, right)
-        right = re.sub('@', 'ans', right)
-
-    if left:
-        m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)\(([a-zA-Z0-9_,]+)\)", left)
-        if m:
-            return m.group(1), "lambda " + m.group(2) + " : " + right
-
-    return left, right
-
-
-def postprocess_answer(var, expr, answer):
-    txt = str(answer) if answer is not None else ""
-    if "<function <lambda" in txt:
-        return expr
-
-    answer = re.sub(', 0:00:00', '', txt)
-
-    return answer
-
-
-def calc(view, edit, line):
-    line_contents = view.substr(line).lower()
-    line_contents = re.sub('\\s+', '', line_contents)
-
-    # print("CALCULATING LINE: " + str(line_contents))
-
-    if len(line_contents) == 0 or line_contents.startswith((';', '#', "'")) or line_contents.startswith('answer'):
-        return None
-
-    # Create new stack
-    m = re.match(r'^\s*@([a-zA-Z][a-zA-Z0-9_]*)\s*$', line_contents)
-    if m:
-        stack_name = m.group(1)
-        local_vars(view)[STACK_NAME_INTERNAL_VAR] = stack_name
-        local_vars(view)[stack_name] = []
-        return False
-
-    # Extract custom function definition
-    parts = re.split('=', line_contents)
-
-    right_part = parts[0] if len(parts) == 1 else parts[1]
-    left_part = None if (len(parts) == 1) else parts[0]
-
-    # Remove end-of-line comment
-    right_parts = re.split("[;#']", right_part)
-    expr = right_parts[0]
-
-    try:
-        (var, expr) = preprocess_expression(left_part, expr, view)
-        answer = eval(expr, globals(), local_vars(view))
-
-        stack_name = local_vars(view)[STACK_NAME_INTERNAL_VAR]
-
-        local_vars(view)['ans'] = answer
-        local_vars(view)[stack_name].insert(0, answer)
-        if var:
-            local_vars(view)[var] = answer
-
-        return postprocess_answer(var, expr, answer)
-    except Exception as ex:
-        print(traceback.format_exc())
-        view.show_popup("<b>Error</b><br>" + str(ex), sublime.HIDE_ON_MOUSE_MOVE_AWAY)
-        return None
-    finally:
-        update_vars(view, edit)
-
-
 def update_vars(view, edit):
 
     def build_vars_map(vars):
@@ -244,8 +135,8 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
         while point < self.view.size() and limit < 10000:
             line = self.view.line(point)
             point = line.end() + 1
-            answer = calc(self.view, edit, line)
-            print_answer(self.view, edit, line, answer)
+            answer = self.calc(self.view, edit, line)
+            self.print_answer(self.view, edit, line, answer)
             limit += 1
 
         if new_line:
@@ -268,6 +159,109 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
                 self.view.sel().add(reg + 1 if eof else reg)
 
         self.view.set_status('worksheet', "Updated worksheet at " + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+
+    def print_answer(self, view, edit, line, answer):
+        if not answer:
+            return
+
+        ans_line = view.find(ANSWER_PATTERN, line.end() + 1)
+        ans_text = ANSWER_LINE + str(answer)
+        if ans_line is not None and 0 < ans_line.begin() <= line.end() + 1:
+            view.replace(edit, ans_line, ans_text)
+        else:
+            view.insert(edit, line.end(), CR_LF + ans_text)
+
+    def preprocess_expression(self, left, right, view):
+        if right:
+            # Percent arithmetic: A */ N% transforms to A */ (N ÷ 100)
+            right = re.sub(r'([*/])\s*([0-9.]+)%', r'\1(\2/100)', right)
+
+            # Percent arithmetic: A ± N% transforms to A ± A * (N ÷ 100)
+            right = re.sub(r'([+-])\s*([0-9.]+)%', r'*(1\1\2/100)', right)
+
+            # M:N transforms to Fraction(M, N)
+            right = re.sub(r'(\d+):(\d+)', r'Fraction(\1, \2)', right)
+
+            # ::N transforms to Fraction(N)
+            right = re.sub(r':::([0-9.]+)', r'Fraction(\1)', right)
+            right = re.sub(r'::([0-9.]+)', r'Fraction(\1).limit_denominator()', right)
+
+            # Date arithmetic
+            right = re.sub(r'today', 'date.today()', right, flags=re.IGNORECASE)
+            right = re.sub(r'now', 'datetime.today()', right, flags=re.IGNORECASE)
+            right = re.sub(r'(\d+)\s*sec(ond(s)?)?', r'timedelta(seconds = \1)', right, flags=re.IGNORECASE)
+            right = re.sub(r'(\d+)\s*min(ute(s)?)?', r'timedelta(minutes = \1)', right, flags=re.IGNORECASE)
+            right = re.sub(r'(\d+)\s*hour(s)?', r'timedelta(hours = \1)', right, flags=re.IGNORECASE)
+            right = re.sub(r'(\d+)\s*day(s)?', r'timedelta(days = \1)', right, flags=re.IGNORECASE)
+            right = re.sub(r'(\d+)\s*week(s)?', r'timedelta(weeks = \1)', right, flags=re.IGNORECASE)
+            right = re.sub(r'(\d+)\s*month(s)?', r'relativedelta(months = \1)', right, flags=re.IGNORECASE)
+            right = re.sub(r'(\d+)\s*year(s)?', r'relativedelta(years = \1)', right, flags=re.IGNORECASE)
+
+            # answers stack
+            stack_name = local_vars(view)[STACK_NAME_INTERNAL_VAR]
+            right = re.sub(r'@(\d+)', r'({0}[\1] if len({0}) > \1 else 0)'.format(stack_name), right)
+            right = re.sub('@@', stack_name, right)
+            right = re.sub('@', 'ans', right)
+
+        if left:
+            m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)\(([a-zA-Z0-9_,]+)\)", left)
+            if m:
+                return m.group(1), "lambda " + m.group(2) + " : " + right
+
+        return left, right
+
+    def postprocess_answer(self, var, expr, answer):
+        txt = str(answer) if answer is not None else ""
+        if "<function <lambda" in txt:
+            return expr
+
+        answer = re.sub(', 0:00:00', '', txt)
+
+        return answer
+
+    def calc(self, view, edit, line):
+        line_contents = view.substr(line).lower()
+        line_contents = re.sub('\\s+', '', line_contents)
+
+        if len(line_contents) == 0 or line_contents.startswith((';', '#', "'")) or line_contents.startswith('answer'):
+            return None
+
+        # Create new stack
+        m = re.match(r'^\s*@([a-zA-Z][a-zA-Z0-9_]*)\s*$', line_contents)
+        if m:
+            stack_name = m.group(1)
+            local_vars(view)[STACK_NAME_INTERNAL_VAR] = stack_name
+            local_vars(view)[stack_name] = []
+            return False
+
+        # Extract custom function definition
+        parts = re.split('=', line_contents)
+
+        right_part = parts[0] if len(parts) == 1 else parts[1]
+        left_part = None if (len(parts) == 1) else parts[0]
+
+        # Remove end-of-line comment
+        right_parts = re.split("[;#']", right_part)
+        expr = right_parts[0]
+
+        try:
+            (var, expr) = self.preprocess_expression(left_part, expr, view)
+            answer = eval(expr, globals(), local_vars(view))
+
+            stack_name = local_vars(view)[STACK_NAME_INTERNAL_VAR]
+
+            local_vars(view)['ans'] = answer
+            local_vars(view)[stack_name].insert(0, answer)
+            if var:
+                local_vars(view)[var] = answer
+
+            return self.postprocess_answer(var, expr, answer)
+        except Exception as ex:
+            print(traceback.format_exc())
+            view.show_popup("<b>Error</b><br>" + str(ex), sublime.HIDE_ON_MOUSE_MOVE_AWAY)
+            return None
+        finally:
+            update_vars(view, edit)
 
 
 class ToggleCommentCommand(sublime_plugin.TextCommand):
