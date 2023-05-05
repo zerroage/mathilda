@@ -241,6 +241,24 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
     def preprocess_expression(self, left, right, view):
         if right:
+            # Unicode symbols
+            right = re.sub(r'(?u)\u00f7', '/', right)
+            right = re.sub(r'(?u)\u00d7', '*', right)
+            right = re.sub(r'(?u)\u00b2', '**2', right)
+            right = re.sub(r'(?u)\u00b3', '**3', right)
+            right = re.sub(r'(?u)\u00b4', '**4', right)
+            right = re.sub(r'(?u)\u00b5', '**5', right)
+            right = re.sub(r'(?u)\u00b6', '**6', right)
+            right = re.sub(r'(?u)\u00b7', '**7', right)
+            right = re.sub(r'(?u)\u00b8', '**8', right)
+            right = re.sub(r'(?u)\u00b29', '**9', right)
+            right = re.sub(r'(?u)\u221a([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/2)', right)
+            right = re.sub(r'(?u)\u221a\((.+?)\)', r'(\1)**(1/2)', right)
+            right = re.sub(r'(?u)\u221b([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/3)', right)
+            right = re.sub(r'(?u)\u221b\((.+?)\)', r'(\1)**(1/3)', right)
+            right = re.sub(r'(?u)\u221c([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/4)', right)
+            right = re.sub(r'(?u)\u221c\((.+?)\)', r'(\1)**(1/4)', right)
+
             # Percent arithmetic: A */ N% transforms to A */ (N ÷ 100)
             right = re.sub(r'([*/])\s*([0-9.]+)%', r'\1(\2/100)', right)
 
