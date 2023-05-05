@@ -22,12 +22,6 @@ ANSWER_PATTERN = "^\\s*Answer\\s*=\\s*.*$"
 CR_LF = "\n"
 
 
-def local_vars(view):
-    if not hasattr(view, "local_vars"):
-        view.local_vars = OrderedDict()
-
-    return view.local_vars
-
 # Useful math functions
 
 
@@ -82,38 +76,55 @@ def gibberish(wordcount):
     return ' '.join(random.sample(list(syllables), wordcount))
 
 
-def update_vars(view, edit):
-
-    def build_vars_map(vars):
-        vars_map = {}
-        for k in vars:
-            if not str(k).startswith(INTERNAL_VAR_PREFIX):
-                if isinstance(vars[k], list):
-                    vars_map["@" + k] = "<Stack of %d item(s)>" % len(vars[k])
-                else:
-                    vars_map[k] = vars[k]
-        max_var_name_len = max(list(map(lambda x: len(str(x)), vars_map.keys())))
-        max_var_value_len = max(list(map(lambda x: len(str(x)), vars_map.values())))
-
-        table = "VARIABLES\n" + "-" * (max_var_name_len + max_var_value_len + 3) + "\n"
-        for k, v in vars_map.items():
-            table += "" + str(k).ljust(max_var_name_len) + " : " + str(v).ljust(max_var_value_len) + "\n"
-
-        return table
-
-    panel = view.window().find_output_panel("local_vars")
-
-    if panel:
-        vars_map = build_vars_map(local_vars(view))
-        panel.erase(edit, sublime.Region(0, panel.size()))
-        panel.assign_syntax("Mathilda-vars-panel.sublime-syntax")
-        panel.insert(edit, panel.size(), str(vars_map))
-
-
-class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
+class MathildaBaseCommand(sublime_plugin.TextCommand):
 
     def is_visible(self):
         return "Mathilda" in self.view.settings().get("syntax")
+
+    def local_vars(self):
+        if not hasattr(self.view, "local_vars"):
+            self.view.local_vars = OrderedDict()
+
+        return self.view.local_vars
+
+    def set_local_var(self, var, value):
+        self.local_vars()[var.lower().strip()] = value
+
+    def get_local_var(self, var):
+        return self.local_vars()[var.lower().strip()]
+
+    def clear_local_vars(self):
+        self.local_vars().clear()
+
+    def update_vars(self, edit):
+
+        def build_vars_map(vars):
+            vars_map = {}
+            for k in vars:
+                if not str(k).startswith(INTERNAL_VAR_PREFIX):
+                    if isinstance(vars[k], list):
+                        vars_map["@" + k] = "<Stack of %d item(s)>" % len(vars[k])
+                    else:
+                        vars_map[k] = vars[k]
+            max_var_name_len = max(list(map(lambda x: len(str(x)), vars_map.keys())))
+            max_var_value_len = max(list(map(lambda x: len(str(x)), vars_map.values())))
+
+            table = "VARIABLES\n" + "-" * (max_var_name_len + max_var_value_len + 3) + "\n"
+            for k, v in vars_map.items():
+                table += "" + str(k).ljust(max_var_name_len) + " : " + str(v).ljust(max_var_value_len) + "\n"
+
+            return table
+
+        panel = self.view.window().find_output_panel("local_vars")
+
+        if panel:
+            vars_map = build_vars_map(self.local_vars())
+            panel.erase(edit, sublime.Region(0, panel.size()))
+            panel.assign_syntax("Mathilda-vars-panel.sublime-syntax")
+            panel.insert(edit, panel.size(), str(vars_map))
+
+
+class RecalculateWorksheetCommand(MathildaBaseCommand):
 
     def update_view_name(self, edit):
 
@@ -126,9 +137,9 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
 
     def run(self, edit, new_line=False):
         self.update_view_name(edit)
-        local_vars(self.view).clear()
-        local_vars(self.view)['__stack_name'] = "__stack"
-        local_vars(self.view)['__stack'] = []
+        self.clear_local_vars()
+        self.set_local_var('__stack_name', "__stack")
+        self.set_local_var('__stack', [])
 
         point = 0
         limit = 0
@@ -138,35 +149,29 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
             line = self.view.line(point)
             point = line.end() + 1
 
-            line_contents = self.view.substr(line).lower()
-            line_contents = re.sub('\\s+', '', line_contents)
+            line_contents = self.view.substr(line).lower().strip()
 
             if len(line_contents) == 0:
                 continue
 
             if line_contents.startswith('answer'):
                 continue
-            
+
             if line_contents.startswith(';'):
                 continue
-            
+
             if line_contents.startswith('#'):
                 current_section = line_contents.lstrip("#")
                 continue
-            
-            if line_contents.startswith('@'):
-                current_stack = line_contents.lstrip("@")
-                continue
-            
+
             # Create new stack
             m = re.match(r'^\s*@([a-zA-Z][a-zA-Z0-9_]*)\s*$', line_contents)
             if m:
-                stack_name = m.group(1)
-                local_vars(view)[STACK_NAME_INTERNAL_VAR] = stack_name
-                local_vars(view)[stack_name] = []
-                return False
-            
-            
+                current_stack = m.group(1)
+                self.set_local_var(STACK_NAME_INTERNAL_VAR, current_stack)
+                self.set_local_var(current_stack, [])
+                continue
+
             answer = self.calc(self.view, edit, line_contents)
             self.print_answer(self.view, edit, line, answer)
             limit += 1
@@ -206,15 +211,14 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
 
         try:
             (var, expr) = self.preprocess_expression(left_part, expr, view)
-            
-            answer = eval(expr, globals(), local_vars(view))
+            answer = eval(expr, globals(), self.local_vars())
 
-            stack_name = local_vars(view)[STACK_NAME_INTERNAL_VAR]
+            stack_name = self.get_local_var(STACK_NAME_INTERNAL_VAR)
 
-            local_vars(view)['ans'] = answer
-            local_vars(view)[stack_name].insert(0, answer)
+            self.set_local_var('ans', answer)
+            self.get_local_var(stack_name).insert(0, answer)
             if var:
-                local_vars(view)[var] = answer
+                self.set_local_var(var, answer)
 
             return self.postprocess_answer(var, expr, answer)
         except Exception as ex:
@@ -222,7 +226,7 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
             view.show_popup("<b>Error</b><br>" + str(ex), sublime.HIDE_ON_MOUSE_MOVE_AWAY)
             return None
         finally:
-            update_vars(view, edit)
+            self.update_vars(edit)
 
     def print_answer(self, view, edit, line, answer):
         if not answer:
@@ -262,7 +266,7 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
             right = re.sub(r'(\d+)\s*year(s)?', r'relativedelta(years = \1)', right, flags=re.IGNORECASE)
 
             # answers stack
-            stack_name = local_vars(view)[STACK_NAME_INTERNAL_VAR]
+            stack_name = self.get_local_var(STACK_NAME_INTERNAL_VAR)
             right = re.sub(r'@(\d+)', r'({0}[\1] if len({0}) > \1 else 0)'.format(stack_name), right)
             right = re.sub('@@', stack_name, right)
             right = re.sub('@', 'ans', right)
@@ -284,10 +288,7 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
         return answer
 
 
-class ToggleCommentCommand(sublime_plugin.TextCommand):
-
-    def is_visible(self):
-        return "Mathilda" in self.view.settings().get("syntax")
+class ToggleCommentCommand(MathildaBaseCommand):
 
     def run(self, edit):
         for region in self.view.sel():
@@ -305,12 +306,9 @@ class ToggleCommentCommand(sublime_plugin.TextCommand):
                 self.view.insert(edit, line.begin(), '; ')
 
 
-class ListVarsCommand(sublime_plugin.TextCommand):
-
-    def is_visible(self):
-        return "Mathilda" in self.view.settings().get("syntax")
+class ListVarsCommand(MathildaBaseCommand):
 
     def run(self, edit):
         self.view.window().create_output_panel("local_vars")
         self.view.window().run_command('show_panel', {"panel": 'output.local_vars'})
-        update_vars(self.view, edit)
+        self.update_vars(edit)
