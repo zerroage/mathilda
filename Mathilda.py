@@ -132,10 +132,42 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
 
         point = 0
         limit = 0
+        current_section = ""
+        current_stack = ""
         while point < self.view.size() and limit < 10000:
             line = self.view.line(point)
             point = line.end() + 1
-            answer = self.calc(self.view, edit, line)
+
+            line_contents = self.view.substr(line).lower()
+            line_contents = re.sub('\\s+', '', line_contents)
+
+            if len(line_contents) == 0:
+                continue
+
+            if line_contents.startswith('answer'):
+                continue
+            
+            if line_contents.startswith(';'):
+                continue
+            
+            if line_contents.startswith('#'):
+                current_section = line_contents.lstrip("#")
+                continue
+            
+            if line_contents.startswith('@'):
+                current_stack = line_contents.lstrip("@")
+                continue
+            
+            # Create new stack
+            m = re.match(r'^\s*@([a-zA-Z][a-zA-Z0-9_]*)\s*$', line_contents)
+            if m:
+                stack_name = m.group(1)
+                local_vars(view)[STACK_NAME_INTERNAL_VAR] = stack_name
+                local_vars(view)[stack_name] = []
+                return False
+            
+            
+            answer = self.calc(self.view, edit, line_contents)
             self.print_answer(self.view, edit, line, answer)
             limit += 1
 
@@ -160,20 +192,7 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
 
         self.view.set_status('worksheet', "Updated worksheet at " + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
-    def calc(self, view, edit, line):
-        line_contents = view.substr(line).lower()
-        line_contents = re.sub('\\s+', '', line_contents)
-
-        if len(line_contents) == 0 or line_contents.startswith((';', '#', "'")) or line_contents.startswith('answer'):
-            return None
-
-        # Create new stack
-        m = re.match(r'^\s*@([a-zA-Z][a-zA-Z0-9_]*)\s*$', line_contents)
-        if m:
-            stack_name = m.group(1)
-            local_vars(view)[STACK_NAME_INTERNAL_VAR] = stack_name
-            local_vars(view)[stack_name] = []
-            return False
+    def calc(self, view, edit, line_contents):
 
         # Extract custom function definition
         parts = re.split('=', line_contents)
@@ -187,6 +206,7 @@ class RecalculateWorksheetCommand(sublime_plugin.TextCommand):
 
         try:
             (var, expr) = self.preprocess_expression(left_part, expr, view)
+            
             answer = eval(expr, globals(), local_vars(view))
 
             stack_name = local_vars(view)[STACK_NAME_INTERNAL_VAR]
