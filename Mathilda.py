@@ -14,9 +14,6 @@ import sublime
 import sublime_plugin
 from dateutil.relativedelta import relativedelta
 
-INTERNAL_VAR_PREFIX = "__"
-STACK_NAME_INTERNAL_VAR = INTERNAL_VAR_PREFIX + 'stack_name'
-
 ANSWER_LINE = "\t\t\tAnswer = "
 ANSWER_PATTERN = "^\\s*Answer\\s*=\\s*.*$"
 CR_LF = "\n"
@@ -78,9 +75,13 @@ def gibberish(wordcount):
 
 class MathildaBaseCommand(sublime_plugin.TextCommand):
 
+    INTERNAL_VAR_PREFIX = "__"
+    STACK_NAME_INTERNAL_VAR = INTERNAL_VAR_PREFIX + 'stack_name'
+    SECTION_NAME_INTERNAL_VAR = INTERNAL_VAR_PREFIX + 'section_name'
+
     def is_visible(self):
         return "Mathilda" in self.view.settings().get("syntax")
-
+    
     def local_vars(self):
         if not hasattr(self.view, "local_vars"):
             self.view.local_vars = OrderedDict()
@@ -88,7 +89,11 @@ class MathildaBaseCommand(sublime_plugin.TextCommand):
         return self.view.local_vars
 
     def set_local_var(self, var, value):
-        self.local_vars()[var.lower().strip()] = value
+        if var:
+            self.local_vars()[var.lower().strip()] = value
+
+        self.local_vars()['ans'] = value
+        self.push_to_current_stack(var, value)
 
     def get_local_var(self, var):
         return self.local_vars()[var.lower().strip()]
@@ -96,12 +101,28 @@ class MathildaBaseCommand(sublime_plugin.TextCommand):
     def clear_local_vars(self):
         self.local_vars().clear()
 
+    def start_new_stack(self, stack_name):
+        self.local_vars()[self.STACK_NAME_INTERNAL_VAR] = stack_name
+        self.local_vars()[stack_name] = []
+
+    def start_new_section(self, section_name):
+        self.local_vars()[self.SECTION_NAME_INTERNAL_VAR] = section_name
+        self.local_vars()[section_name] = []
+
+    def push_to_current_stack(self, var, value):
+        # Don't put stacks on stack :-)
+        if not isinstance(value, list):
+            stack_name = self.local_vars()[self.STACK_NAME_INTERNAL_VAR]
+            if stack_name:
+                if stack_name in self.local_vars():
+                    self.local_vars()[stack_name].insert(0, value)
+
     def update_vars(self, edit):
 
         def build_vars_map(vars):
             vars_map = {}
             for k in vars:
-                if not str(k).startswith(INTERNAL_VAR_PREFIX):
+                if not str(k).startswith(self.INTERNAL_VAR_PREFIX):
                     if isinstance(vars[k], list):
                         vars_map["@" + k] = "<Stack of %d item(s)>" % len(vars[k])
                     else:
@@ -138,13 +159,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
     def run(self, edit, new_line=False):
         self.update_view_name(edit)
         self.clear_local_vars()
-        self.set_local_var('__stack_name', "__stack")
-        self.set_local_var('__stack', [])
+        self.start_new_stack("__stack")
 
         point = 0
         limit = 0
-        current_section = ""
-        current_stack = ""
         while point < self.view.size() and limit < 10000:
             line = self.view.line(point)
             point = line.end() + 1
@@ -161,15 +179,20 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 continue
 
             if line_contents.startswith('#'):
-                current_section = line_contents.lstrip("#")
+                section_name = line_contents.lstrip("#")
+                self.start_new_section(section_name)
                 continue
 
-            # Create new stack
-            m = re.match(r'^\s*@([a-zA-Z][a-zA-Z0-9_]*)\s*$', line_contents)
-            if m:
-                current_stack = m.group(1)
-                self.set_local_var(STACK_NAME_INTERNAL_VAR, current_stack)
-                self.set_local_var(current_stack, [])
+            if line_contents.startswith('@'):
+                stack_name = line_contents.lstrip("@")
+                # Sanitize stack name
+                stack_name = re.sub(r'[^a-zA-Z0-9]+', '_', stack_name).strip("_")
+                # Stack name cannot start with a digit
+                stack_name = re.sub(r'^\d+(.*)', r'\1', stack_name)
+                if len(stack_name) == 0:
+                    stack_name = "stack_%d" % self.view.rowcol(point)[0]
+                self.view.replace(edit, line, "@" + stack_name)
+                self.start_new_stack(stack_name)
                 continue
 
             answer = self.calc(self.view, edit, line_contents)
@@ -213,12 +236,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             (var, expr) = self.preprocess_expression(left_part, expr, view)
             answer = eval(expr, globals(), self.local_vars())
 
-            stack_name = self.get_local_var(STACK_NAME_INTERNAL_VAR)
-
-            self.set_local_var('ans', answer)
-            self.get_local_var(stack_name).insert(0, answer)
-            if var:
-                self.set_local_var(var, answer)
+            self.set_local_var(var, answer)
 
             return self.postprocess_answer(var, expr, answer)
         except Exception as ex:
