@@ -160,6 +160,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         self.update_view_name(edit)
         self.clear_local_vars()
         self.start_new_stack("__stack")
+        self.view.erase_regions("errors")
+        
+        error_regions = []
+        error_annotations = []
 
         point = 0
         limit = 0
@@ -195,10 +199,20 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 self.start_new_stack(stack_name)
                 continue
 
-            answer = self.calc(self.view, edit, line_contents)
-            self.print_answer(self.view, edit, line, answer)
-            limit += 1
-
+            try:
+                answer = self.calc(self.view, edit, line_contents)
+                self.print_answer(self.view, edit, line, answer)
+            except Exception as ex:
+                # view.show_popup("<b>Error</b><br>" + str(ex), sublime.HIDE_ON_MOUSE_MOVE_AWAY)
+                self.print_answer(self.view, edit, line, "ERROR")
+                error_regions += [line]
+                error_annotations += [str(ex)]
+            finally:
+                limit += 1
+            
+        if error_regions:
+            self.view.add_regions("errors", error_regions, "region.redish", "dot", 256 | 32 | 2048, error_annotations)
+            
         if new_line:
             for region in self.view.sel():
                 line = self.view.line(region)
@@ -217,7 +231,8 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 self.view.sel().clear()
                 self.view.insert(edit, reg, CR_LF)
                 self.view.sel().add(reg + 1 if eof else reg)
-
+                
+        self.update_vars(edit)
         self.view.set_status('worksheet', "Updated worksheet at " + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
     def calc(self, view, edit, line_contents):
@@ -232,19 +247,12 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         right_parts = re.split("[;#']", right_part)
         expr = right_parts[0]
 
-        try:
-            (var, expr) = self.preprocess_expression(left_part, expr, view)
-            answer = eval(expr, globals(), self.local_vars())
+        (var, expr) = self.preprocess_expression(left_part, expr, view)
+        answer = eval(expr, globals(), self.local_vars())
 
-            self.set_local_var(var, answer)
+        self.set_local_var(var, answer)
 
-            return self.postprocess_answer(var, expr, answer)
-        except Exception as ex:
-            print(traceback.format_exc())
-            view.show_popup("<b>Error</b><br>" + str(ex), sublime.HIDE_ON_MOUSE_MOVE_AWAY)
-            return None
-        finally:
-            self.update_vars(edit)
+        return self.postprocess_answer(var, expr, answer)
 
     def print_answer(self, view, edit, line, answer):
         if not answer:
