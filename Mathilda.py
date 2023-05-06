@@ -118,7 +118,7 @@ class ContextHolder:
     def get_vars(self):
         return self.vars_dict
 
-    def store_result(self, var_name, value, remark=""):
+    def store_result(self, var_name, value, remark="", push_to_stack = True):
         # TODO: Don't put stacks on stack :-)
         # if not isinstance(value, list):
 
@@ -133,9 +133,9 @@ class ContextHolder:
         self.history.append(result)
 
         # Add to the currently active stack and section
-        if len(self.stacks) > 0:
+        if len(self.stacks) > 0 and push_to_stack:
             self.stacks[-1].items.append(result)
-        if len(self.sections) > 0:
+        if len(self.sections) > 0 and push_to_stack:
             self.sections[-1].items.append(result)
 
     def start_new_stack(self, stack_name, remark):
@@ -210,6 +210,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
             expression = self.view.substr(line).lower().strip()
             remark = ""
+            push_to_stack = True
 
             if not expression:
                 continue
@@ -222,6 +223,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             if expression.startswith(';'):
                 continue
             
+            # Process section (header comments)
             if expression.startswith('#'):
                 section_name = expression.lstrip("#")
                 self.context().start_new_section(section_name)
@@ -230,8 +232,8 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             # Process comments
             expression_with_remark = re.split("[;#']", expression, 1)
             if len(expression_with_remark) > 1:
-                expression = expression_with_remark[0]
-                remark = expression_with_remark[1]
+                expression = expression_with_remark[0].strip()
+                remark = expression_with_remark[1].strip()
 
             # Process stacks
             if expression.startswith('@'):
@@ -242,12 +244,17 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                     self.context().start_new_stack(stack_name, remark)
                     continue
 
+            # Process "don't push to stack" directive: ?
+            if expression.startswith('?'):
+                expression = expression.lstrip('?').strip()
+                push_to_stack = False
+                
             # Evaulate line
             try:
                 (var_name, answer) = self.evaluate(expression)
                 pretty_answer = self.prettify(var_name, expression, answer)
-
-                self.context().store_result(var_name, answer, remark)
+                
+                self.context().store_result(var_name, answer, remark, push_to_stack)
                 self.print_answer(self.view, edit, line, pretty_answer)
             except Exception as ex:
                 self.print_answer(self.view, edit, line, "ERROR")
