@@ -270,6 +270,9 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
     def preprocess_expression(self, left, right, view):
         if right:
+            # Factorial
+            right = re.sub(r'(\d+)!', r'factorial(\1)', right)
+
             # Unicode symbols
             right = re.sub(r'(?u)\u00f7', '/', right)
             right = re.sub(r'(?u)\u00d7', '*', right)
