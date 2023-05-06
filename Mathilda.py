@@ -164,7 +164,6 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
         error_regions = []
         error_annotations = []
-
         point = 0
         limit = 0
         while point < self.view.size() and limit < 10000:
@@ -190,14 +189,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             if line_contents.startswith('@'):
                 stack_name = line_contents.lstrip("@")
                 # Sanitize stack name
-                stack_name = re.sub(r'[^a-zA-Z0-9]+', '_', stack_name).strip("_")
-                # Stack name cannot start with a digit
-                stack_name = re.sub(r'^\d+(.*)', r'\1', stack_name)
-                if len(stack_name) == 0:
-                    stack_name = "stack_%d" % self.view.rowcol(point)[0]
-                self.view.replace(edit, line, "@" + stack_name)
-                self.start_new_stack(stack_name)
-                continue
+                m = re.match(r'[a-zA-Z][a-zA-Z0-9_]*', stack_name)
+                if m:
+                    self.start_new_stack(stack_name)
+                    continue
 
             try:
                 answer = self.calc(self.view, edit, line_contents)
