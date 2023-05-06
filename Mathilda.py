@@ -81,7 +81,7 @@ class MathildaBaseCommand(sublime_plugin.TextCommand):
 
     def is_visible(self):
         return "Mathilda" in self.view.settings().get("syntax")
-    
+
     def local_vars(self):
         if not hasattr(self.view, "local_vars"):
             self.view.local_vars = OrderedDict()
@@ -161,7 +161,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         self.clear_local_vars()
         self.start_new_stack("__stack")
         self.view.erase_regions("errors")
-        
+
         error_regions = []
         error_annotations = []
 
@@ -209,13 +209,13 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 error_annotations += [str(ex)]
             finally:
                 limit += 1
-            
+
         if error_regions:
-            self.view.add_regions("errors", error_regions, 
-                                  "region.redish", "dot", 
-                                  sublime.DRAW_NO_OUTLINE | sublime.DRAW_NO_FILL | sublime.DRAW_SQUIGGLY_UNDERLINE, 
+            self.view.add_regions("errors", error_regions,
+                                  "region.redish", "dot",
+                                  sublime.DRAW_NO_OUTLINE | sublime.DRAW_NO_FILL | sublime.DRAW_SQUIGGLY_UNDERLINE,
                                   error_annotations)
-            
+
         if new_line:
             for region in self.view.sel():
                 line = self.view.line(region)
@@ -234,7 +234,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 self.view.sel().clear()
                 self.view.insert(edit, reg, CR_LF)
                 self.view.sel().add(reg + 1 if eof else reg)
-                
+
         self.update_vars(edit)
         self.view.set_status('worksheet', "Updated worksheet at " + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
@@ -316,16 +316,16 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             right = re.sub(r'(\d+)\s*year(s)?', r'relativedelta(years = \1)', right, flags=re.IGNORECASE)
 
             # answers stack
-            stack_name = self.get_local_var(STACK_NAME_INTERNAL_VAR)
+            stack_name = self.get_local_var(self.STACK_NAME_INTERNAL_VAR)
             right = re.sub(r'@(\d+)', r'({0}[\1] if len({0}) > \1 else 0)'.format(stack_name), right)
             right = re.sub('@@', stack_name, right)
             right = re.sub('@', 'ans', right)
 
-        if left:            
+        if left:
             m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)\s*\(\s*((?:[a-zA-Z][a-zA-Z0-9_]*)(?:\s*,\s*[a-zA-Z][a-zA-Z0-9_]*)*)\s*\)", left)
             if m:
                 left = m.group(1)
-                if right: 
+                if right:
                     right = "lambda " + m.group(2) + " : " + right
                 else:
                     raise Exception("Invalid function definition: <i>%s = %s</i>" % (left, right))
@@ -335,7 +335,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                     left = m.group(1)
                     if not right:
                         raise Exception("Invalid variable definition: <i>%s = %s</i>" % (left, right))
-                else:    
+                else:
                     raise Exception("Invalid function or variable declaration: <i>%s = %s</i>" % (left, right))
 
         return left, right
