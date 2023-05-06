@@ -211,7 +211,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 limit += 1
             
         if error_regions:
-            self.view.add_regions("errors", error_regions, "region.redish", "dot", 256 | 32 | 2048, error_annotations)
+            self.view.add_regions("errors", error_regions, 
+                                  "region.redish", "dot", 
+                                  sublime.DRAW_NO_OUTLINE | sublime.DRAW_NO_FILL | sublime.DRAW_SQUIGGLY_UNDERLINE, 
+                                  error_annotations)
             
         if new_line:
             for region in self.view.sel():
