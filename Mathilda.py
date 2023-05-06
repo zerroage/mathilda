@@ -170,38 +170,40 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             line = self.view.line(point)
             point = line.end() + 1
 
-            line_contents = self.view.substr(line).lower().strip()
+            expression = self.view.substr(line).lower().strip()
 
-            if len(line_contents) == 0:
+            if len(expression) == 0:
                 continue
 
-            if line_contents.startswith('answer'):
+            if expression.startswith('answer'):
                 continue
 
-            if line_contents.startswith(';'):
+            if expression.startswith(';'):
                 continue
 
-            if line_contents.startswith('#'):
-                section_name = line_contents.lstrip("#")
+            if expression.startswith('#'):
+                section_name = expression.lstrip("#")
                 self.start_new_section(section_name)
                 continue
 
-            if line_contents.startswith('@'):
-                stack_name = line_contents.lstrip("@")
+            if expression.startswith('@'):
+                stack_name = expression.lstrip("@")
                 # Sanitize stack name
                 m = re.match(r'[a-zA-Z][a-zA-Z0-9_]*', stack_name)
                 if m:
                     self.start_new_stack(stack_name)
                     continue
 
-            annotated_expr = re.split("[;#']", line_contents, 1)
+            annotated_expr = re.split("[;#']", expression, 1)
             if len(annotated_expr) > 1:
-                line_contents = annotated_expr[0]
+                expression = annotated_expr[0]
 
+            # Evaulate line 
             try:
-                (var_name, answer) = self.calc(line_contents)
+                (var_name, answer) = self.evaluate(expression)
+                pretty_answer = self.prettify(var_name, expression, answer)
+                
                 self.set_local_var(var_name, answer)
-                pretty_answer = self.postprocess_answer(var_name, line_contents, answer)
                 self.print_answer(self.view, edit, line, pretty_answer)
             except Exception as ex:
                 self.print_answer(self.view, edit, line, "ERROR")
@@ -238,10 +240,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         self.update_vars(edit)
         self.view.set_status('worksheet', "Updated worksheet at " + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
-    def calc(self, line_contents):
+    def evaluate(self, line):
 
         # Parse custom function or variable declaration
-        parts = re.split('=', line_contents)
+        parts = re.split('=', line)
 
         right_part = parts[0] if len(parts) == 1 else parts[1]
         left_part = None if (len(parts) == 1) else parts[0]
@@ -333,7 +335,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
         return left, right
 
-    def postprocess_answer(self, var_name, expr, answer):
+    def prettify(self, var_name, expr, answer):
         txt = str(answer) if answer is not None else ""
         if "<function <lambda" in txt:
             return expr
