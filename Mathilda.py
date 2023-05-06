@@ -321,10 +321,22 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             right = re.sub('@@', stack_name, right)
             right = re.sub('@', 'ans', right)
 
-        if left:
-            m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)\(([a-zA-Z0-9_,]+)\)", left)
+        if left:            
+            m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)\s*\(\s*((?:[a-zA-Z][a-zA-Z0-9_]*)(?:\s*,\s*[a-zA-Z][a-zA-Z0-9_]*)*)\s*\)", left)
             if m:
-                return m.group(1), "lambda " + m.group(2) + " : " + right
+                left = m.group(1)
+                if right: 
+                    right = "lambda " + m.group(2) + " : " + right
+                else:
+                    raise Exception("Invalid function definition: <i>%s = %s</i>" % (left, right))
+            else:
+                m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)", left)
+                if m:
+                    left = m.group(1)
+                    if not right:
+                        raise Exception("Invalid variable definition: <i>%s = %s</i>" % (left, right))
+                else:    
+                    raise Exception("Invalid function or variable declaration: <i>%s = %s</i>" % (left, right))
 
         return left, right
 
