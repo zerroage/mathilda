@@ -73,56 +73,94 @@ def gibberish(wordcount):
     return ' '.join(random.sample(list(syllables), wordcount))
 
 
-class MathildaBaseCommand(sublime_plugin.TextCommand):
+class ContextHolder:
+    def __init__(self) -> None:
+        self.clear()
 
-    INTERNAL_VAR_PREFIX = "__"
-    STACK_NAME_INTERNAL_VAR = INTERNAL_VAR_PREFIX + 'stack_name'
-    SECTION_NAME_INTERNAL_VAR = INTERNAL_VAR_PREFIX + 'section_name'
+    class ResultItem:
+        def __init__(self, var_name="", value="", remark="", stack="", section="") -> None:
+            
+            self.var_name = var_name
+            self.value = value
+            self.remark = remark
+            self.stack = stack
+            self.section = section
+
+    class ResultsHolder:
+        def __init__(self, name, remark = ""):
+          self.name = name
+          self.remark = remark
+          self.items = []
+       
+        def get_item_values_list(self):
+            return [r.value for r in self.items]
+
+    def clear(self):
+        self.vars_dict = {}
+        self.history = []
+        self.stacks = []
+        self.sections = []
+
+    def get_evaluation_context(self):
+        context = {} 
+
+        vars_dict = {k: v.value for (k, v) in self.vars_dict.items()}
+        stacks_dict = {s.name: s.get_item_values_list() for s in self.stacks}
+
+        context.update(vars_dict)
+        context.update(stacks_dict)
+
+        context['__CURRENT_STACK'] = self.stacks[-1].get_item_values_list() if len(self.stacks) > 0 else []
+        context['ans'] = self.history[-1].value if len(self.history) > 0 else 0
+
+        return context
+
+    def get_vars(self):
+        return self.vars_dict
+
+    def store_result(self, var_name, value, remark=""):
+        # TODO: Don't put stacks on stack :-)
+        # if not isinstance(value, list):
+
+        stack_name = self.stacks[-1].name if len(self.stacks) > 0 else ""
+        section_name = self.sections[-1].name if len(self.sections) > 0 else ""
+        result = self.ResultItem(var_name, value, remark, stack_name, section_name)
+
+        if var_name:
+            self.vars_dict[var_name] = result
+
+        # Save calculation history in execution order
+        self.history.append(result)
+
+        # Add to the currently active stack and section
+        if len(self.stacks) > 0:
+            self.stacks[-1].items.append(result)
+        if len(self.sections) > 0:
+            self.sections[-1].items.append(result)
+
+    def start_new_stack(self, stack_name, remark):
+        self.stacks.append(self.ResultsHolder(stack_name, remark))
+
+    def start_new_section(self, section_name):
+        self.sections.append(self.ResultsHolder(section_name))
+
+
+class MathildaBaseCommand(sublime_plugin.TextCommand):
 
     def is_visible(self):
         return "Mathilda" in self.view.settings().get("syntax")
 
-    def local_vars(self):
-        if not hasattr(self.view, "local_vars"):
-            self.view.local_vars = OrderedDict()
-
-        return self.view.local_vars
-
-    def set_local_var(self, var, value):
-        if var:
-            self.local_vars()[var.lower().strip()] = value
-
-        self.local_vars()['ans'] = value
-        self.push_to_current_stack(var, value)
-
-    def get_local_var(self, var):
-        return self.local_vars()[var.lower().strip()]
-
-    def clear_local_vars(self):
-        self.local_vars().clear()
-
-    def start_new_stack(self, stack_name):
-        self.local_vars()[self.STACK_NAME_INTERNAL_VAR] = stack_name
-        self.local_vars()[stack_name] = []
-
-    def start_new_section(self, section_name):
-        self.local_vars()[self.SECTION_NAME_INTERNAL_VAR] = section_name
-        self.local_vars()[section_name] = []
-
-    def push_to_current_stack(self, var, value):
-        # Don't put stacks on stack :-)
-        if not isinstance(value, list):
-            stack_name = self.local_vars()[self.STACK_NAME_INTERNAL_VAR]
-            if stack_name:
-                if stack_name in self.local_vars():
-                    self.local_vars()[stack_name].insert(0, value)
+    def context(self):
+        if not hasattr(self.view, "context"):
+            self.view.context = ContextHolder()
+        return self.view.context
 
     def update_vars(self, edit):
 
         def build_vars_map(vars):
             vars_map = {}
             for k in vars:
-                if not str(k).startswith(self.INTERNAL_VAR_PREFIX):
+                if not str(k).startswith('__'):
                     if isinstance(vars[k], list):
                         vars_map["@" + k] = "<Stack of %d item(s)>" % len(vars[k])
                     else:
@@ -139,7 +177,7 @@ class MathildaBaseCommand(sublime_plugin.TextCommand):
         panel = self.view.window().find_output_panel("local_vars")
 
         if panel:
-            vars_map = build_vars_map(self.local_vars())
+            vars_map = build_vars_map(self.context().get_evaluation_context())
             panel.erase(edit, sublime.Region(0, panel.size()))
             panel.assign_syntax("Mathilda-vars-panel.sublime-syntax")
             panel.insert(edit, panel.size(), str(vars_map))
@@ -158,8 +196,8 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
     def run(self, edit, new_line=False):
         self.update_view_name(edit)
-        self.clear_local_vars()
-        self.start_new_stack("__stack")
+        self.context().clear()
+        self.context().start_new_stack("__stack", 'Anonymous stack')
         self.view.erase_regions("errors")
 
         error_regions = []
@@ -171,6 +209,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             point = line.end() + 1
 
             expression = self.view.substr(line).lower().strip()
+            remark = ""
 
             if len(expression) == 0:
                 continue
@@ -186,24 +225,25 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 self.start_new_section(section_name)
                 continue
 
+            expression_with_remark = re.split("[;#']", expression, 1)
+            if len(expression_with_remark) > 1:
+                expression = expression_with_remark[0]
+                remark = expression_with_remark[1]
+
             if expression.startswith('@'):
                 stack_name = expression.lstrip("@")
                 # Sanitize stack name
                 m = re.match(r'[a-zA-Z][a-zA-Z0-9_]*', stack_name)
                 if m:
-                    self.start_new_stack(stack_name)
+                    self.context().start_new_stack(stack_name, remark)
                     continue
 
-            annotated_expr = re.split("[;#']", expression, 1)
-            if len(annotated_expr) > 1:
-                expression = annotated_expr[0]
-
-            # Evaulate line 
+            # Evaulate line
             try:
                 (var_name, answer) = self.evaluate(expression)
                 pretty_answer = self.prettify(var_name, expression, answer)
-                
-                self.set_local_var(var_name, answer)
+
+                self.context().store_result(var_name, answer, remark)
                 self.print_answer(self.view, edit, line, pretty_answer)
             except Exception as ex:
                 self.print_answer(self.view, edit, line, "ERROR")
@@ -249,7 +289,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         left_part = None if (len(parts) == 1) else parts[0]
 
         (var_name, expr) = self.preprocess_expression(left_part, right_part)
-        result = eval(expr, globals(), self.local_vars())
+        result = eval(expr, globals(), self.context().get_evaluation_context())
         return (var_name, result)
 
     def print_answer(self, view, edit, line, answer):
@@ -310,10 +350,9 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             right = re.sub(r'(\d+)\s*month(s)?', r'relativedelta(months = \1)', right, flags=re.IGNORECASE)
             right = re.sub(r'(\d+)\s*year(s)?', r'relativedelta(years = \1)', right, flags=re.IGNORECASE)
 
-            # answers stack
-            stack_name = self.get_local_var(self.STACK_NAME_INTERNAL_VAR)
-            right = re.sub(r'@(\d+)', r'({0}[\1] if len({0}) > \1 else 0)'.format(stack_name), right)
-            right = re.sub('@@', stack_name, right)
+            # Current stack syntactic sugar
+            right = re.sub(r'@(\d+)', r'(__CURRENT_STACK[-\1] if len(__CURRENT_STACK) > \1 else 0)', right)
+            right = re.sub('@@', '__CURRENT_STACK', right)
             right = re.sub('@', 'ans', right)
 
         if left:
