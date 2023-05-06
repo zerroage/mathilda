@@ -79,7 +79,7 @@ class ContextHolder:
 
     class ResultItem:
         def __init__(self, var_name="", value="", remark="", stack="", section="") -> None:
-            
+
             self.var_name = var_name
             self.value = value
             self.remark = remark
@@ -87,11 +87,11 @@ class ContextHolder:
             self.section = section
 
     class ResultsHolder:
-        def __init__(self, name, remark = ""):
-          self.name = name
-          self.remark = remark
-          self.items = []
-       
+        def __init__(self, name, remark=""):
+            self.name = name
+            self.remark = remark
+            self.items = []
+
         def get_item_values_list(self):
             return [r.value for r in self.items]
 
@@ -102,7 +102,7 @@ class ContextHolder:
         self.sections = []
 
     def get_evaluation_context(self):
-        context = {} 
+        context = {}
 
         vars_dict = {k: v.value for (k, v) in self.vars_dict.items()}
         stacks_dict = {s.name: s.get_item_values_list() for s in self.stacks}
@@ -211,27 +211,31 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             expression = self.view.substr(line).lower().strip()
             remark = ""
 
-            if len(expression) == 0:
+            if not expression:
                 continue
 
+            # Process lines with answers
             if expression.startswith('answer'):
                 continue
 
+            # Process basic comments    
             if expression.startswith(';'):
                 continue
-
+            
             if expression.startswith('#'):
                 section_name = expression.lstrip("#")
-                self.start_new_section(section_name)
+                self.context().start_new_section(section_name)
                 continue
 
+            # Process comments
             expression_with_remark = re.split("[;#']", expression, 1)
             if len(expression_with_remark) > 1:
                 expression = expression_with_remark[0]
                 remark = expression_with_remark[1]
 
+            # Process stacks
             if expression.startswith('@'):
-                stack_name = expression.lstrip("@")
+                stack_name = expression.lstrip('@').strip()
                 # Sanitize stack name
                 m = re.match(r'[a-zA-Z][a-zA-Z0-9_]*', stack_name)
                 if m:
@@ -280,15 +284,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         self.update_vars(edit)
         self.view.set_status('worksheet', "Updated worksheet at " + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
-    def evaluate(self, line):
+    def evaluate(self, expr):
+        expr = self.desugar_expression(expr)
+        (var_name, expr) = self.parse_var_or_function_declaration(expr)
 
-        # Parse custom function or variable declaration
-        parts = re.split('=', line)
-
-        right_part = parts[0] if len(parts) == 1 else parts[1]
-        left_part = None if (len(parts) == 1) else parts[0]
-
-        (var_name, expr) = self.preprocess_expression(left_part, right_part)
         result = eval(expr, globals(), self.context().get_evaluation_context())
         return (var_name, result)
 
@@ -303,76 +302,75 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         else:
             view.insert(edit, line.end(), CR_LF + ans_text)
 
-    def preprocess_expression(self, left, right):
-        if right:
-            # Factorial
-            right = re.sub(r'(\d+)!', r'factorial(\1)', right)
+    def desugar_expression(self, expr):
+        # Factorial
+        expr = re.sub(r'(\d+)!', r'factorial(\1)', expr)
 
-            # Unicode symbols
-            right = re.sub(r'(?u)\u00f7', '/', right)
-            right = re.sub(r'(?u)\u00d7', '*', right)
-            right = re.sub(r'(?u)\u00b2', '**2', right)
-            right = re.sub(r'(?u)\u00b3', '**3', right)
-            right = re.sub(r'(?u)\u00b4', '**4', right)
-            right = re.sub(r'(?u)\u00b5', '**5', right)
-            right = re.sub(r'(?u)\u00b6', '**6', right)
-            right = re.sub(r'(?u)\u00b7', '**7', right)
-            right = re.sub(r'(?u)\u00b8', '**8', right)
-            right = re.sub(r'(?u)\u00b29', '**9', right)
-            right = re.sub(r'(?u)\u221a([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/2)', right)
-            right = re.sub(r'(?u)\u221a\((.+?)\)', r'(\1)**(1/2)', right)
-            right = re.sub(r'(?u)\u221b([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/3)', right)
-            right = re.sub(r'(?u)\u221b\((.+?)\)', r'(\1)**(1/3)', right)
-            right = re.sub(r'(?u)\u221c([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/4)', right)
-            right = re.sub(r'(?u)\u221c\((.+?)\)', r'(\1)**(1/4)', right)
+        # Unicode symbols
+        expr = re.sub(r'(?u)\u00f7', '/', expr)
+        expr = re.sub(r'(?u)\u00d7', '*', expr)
+        expr = re.sub(r'(?u)\u00b2', '**2', expr)
+        expr = re.sub(r'(?u)\u00b3', '**3', expr)
+        expr = re.sub(r'(?u)\u00b4', '**4', expr)
+        expr = re.sub(r'(?u)\u00b5', '**5', expr)
+        expr = re.sub(r'(?u)\u00b6', '**6', expr)
+        expr = re.sub(r'(?u)\u00b7', '**7', expr)
+        expr = re.sub(r'(?u)\u00b8', '**8', expr)
+        expr = re.sub(r'(?u)\u00b29', '**9', expr)
+        expr = re.sub(r'(?u)\u221a([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/2)', expr)
+        expr = re.sub(r'(?u)\u221a\((.+?)\)', r'(\1)**(1/2)', expr)
+        expr = re.sub(r'(?u)\u221b([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/3)', expr)
+        expr = re.sub(r'(?u)\u221b\((.+?)\)', r'(\1)**(1/3)', expr)
+        expr = re.sub(r'(?u)\u221c([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/4)', expr)
+        expr = re.sub(r'(?u)\u221c\((.+?)\)', r'(\1)**(1/4)', expr)
 
-            # Percent arithmetic: A */ N% transforms to A */ (N ÷ 100)
-            right = re.sub(r'([*/])\s*([0-9.]+)%', r'\1(\2/100)', right)
+        # Percent arithmetic: A */ N% transforms to A */ (N ÷ 100)
+        expr = re.sub(r'([*/])\s*([0-9.]+)%', r'\1(\2/100)', expr)
 
-            # Percent arithmetic: A ± N% transforms to A ± A * (N ÷ 100)
-            right = re.sub(r'([+-])\s*([0-9.]+)%', r'*(1\1\2/100)', right)
+        # Percent arithmetic: A ± N% transforms to A ± A * (N ÷ 100)
+        expr = re.sub(r'([+-])\s*([0-9.]+)%', r'*(1\1\2/100)', expr)
 
-            # M:N transforms to Fraction(M, N)
-            right = re.sub(r'(\d+):(\d+)', r'Fraction(\1, \2)', right)
+        # M:N transforms to Fraction(M, N)
+        expr = re.sub(r'(\d+):(\d+)', r'Fraction(\1, \2)', expr)
 
-            # ::N transforms to Fraction(N)
-            right = re.sub(r':::([0-9.]+)', r'Fraction(\1)', right)
-            right = re.sub(r'::([0-9.]+)', r'Fraction(\1).limit_denominator()', right)
+        # ::N transforms to Fraction(N)
+        expr = re.sub(r':::([0-9.]+)', r'Fraction(\1)', expr)
+        expr = re.sub(r'::([0-9.]+)', r'Fraction(\1).limit_denominator()', expr)
 
-            # Date arithmetic
-            right = re.sub(r'today', 'date.today()', right, flags=re.IGNORECASE)
-            right = re.sub(r'now', 'datetime.today()', right, flags=re.IGNORECASE)
-            right = re.sub(r'(\d+)\s*sec(ond(s)?)?', r'timedelta(seconds = \1)', right, flags=re.IGNORECASE)
-            right = re.sub(r'(\d+)\s*min(ute(s)?)?', r'timedelta(minutes = \1)', right, flags=re.IGNORECASE)
-            right = re.sub(r'(\d+)\s*hour(s)?', r'timedelta(hours = \1)', right, flags=re.IGNORECASE)
-            right = re.sub(r'(\d+)\s*day(s)?', r'timedelta(days = \1)', right, flags=re.IGNORECASE)
-            right = re.sub(r'(\d+)\s*week(s)?', r'timedelta(weeks = \1)', right, flags=re.IGNORECASE)
-            right = re.sub(r'(\d+)\s*month(s)?', r'relativedelta(months = \1)', right, flags=re.IGNORECASE)
-            right = re.sub(r'(\d+)\s*year(s)?', r'relativedelta(years = \1)', right, flags=re.IGNORECASE)
+        # Date arithmetic
+        expr = re.sub(r'today', 'date.today()', expr, flags=re.IGNORECASE)
+        expr = re.sub(r'now', 'datetime.today()', expr, flags=re.IGNORECASE)
+        expr = re.sub(r'(\d+)\s*sec(ond(s)?)?', r'timedelta(seconds = \1)', expr, flags=re.IGNORECASE)
+        expr = re.sub(r'(\d+)\s*min(ute(s)?)?', r'timedelta(minutes = \1)', expr, flags=re.IGNORECASE)
+        expr = re.sub(r'(\d+)\s*hour(s)?', r'timedelta(hours = \1)', expr, flags=re.IGNORECASE)
+        expr = re.sub(r'(\d+)\s*day(s)?', r'timedelta(days = \1)', expr, flags=re.IGNORECASE)
+        expr = re.sub(r'(\d+)\s*week(s)?', r'timedelta(weeks = \1)', expr, flags=re.IGNORECASE)
+        expr = re.sub(r'(\d+)\s*month(s)?', r'relativedelta(months = \1)', expr, flags=re.IGNORECASE)
+        expr = re.sub(r'(\d+)\s*year(s)?', r'relativedelta(years = \1)', expr, flags=re.IGNORECASE)
 
-            # Current stack syntactic sugar
-            right = re.sub(r'@(\d+)', r'(__CURRENT_STACK[-\1] if len(__CURRENT_STACK) > \1 else 0)', right)
-            right = re.sub('@@', '__CURRENT_STACK', right)
-            right = re.sub('@', 'ans', right)
+        # Current stack syntactic sugar
+        expr = re.sub(r'@(\d+)', r'(__CURRENT_STACK[-\1] if len(__CURRENT_STACK) > \1 else 0)', expr)
+        expr = re.sub('@@', '__CURRENT_STACK', expr)
+        expr = re.sub('@', 'ans', expr)
 
-        if left:
-            m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)\s*\(\s*((?:[a-zA-Z][a-zA-Z0-9_]*)(?:\s*,\s*[a-zA-Z][a-zA-Z0-9_]*)*)\s*\)", left)
-            if m:
-                left = m.group(1)
-                if right:
-                    right = "lambda " + m.group(2) + " : " + right
-                else:
-                    raise Exception("Invalid function definition: <i>%s = %s</i>" % (left, right))
-            else:
-                m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)", left)
+        return expr
+
+    def parse_var_or_function_declaration(self, expr):
+        if "=" in expr or ":=" in expr:
+            (left, right) = re.split('=|:=', expr, 1)
+            if left and right:
+                # fun_name(arg1, arg2, ...) = ...
+                m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)\s*\(\s*((?:[a-zA-Z][a-zA-Z0-9_]*)(?:\s*,\s*[a-zA-Z][a-zA-Z0-9_]*)*)\s*\)", left)
                 if m:
-                    left = m.group(1)
-                    if not right:
-                        raise Exception("Invalid variable definition: <i>%s = %s</i>" % (left, right))
-                else:
-                    raise Exception("Invalid function or variable declaration: <i>%s = %s</i>" % (left, right))
+                    # Make a lambda-function
+                    return m.group(1).strop(), ("lambda " + m.group(2) + " : " + right.strip())
+                # var_name = ...
+                elif re.match(r"[a-zA-Z][a-zA-Z0-9_]*", left):
+                    return left.strip(), right.strip()
 
-        return left, right
+            raise Exception("Invalid function or variable declaration: <i>%s</i>" % expr)
+        else:
+            return None, expr.strip()
 
     def prettify(self, var_name, expr, answer):
         txt = str(answer) if answer is not None else ""
