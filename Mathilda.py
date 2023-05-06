@@ -194,11 +194,16 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                     self.start_new_stack(stack_name)
                     continue
 
+            annotated_expr = re.split("[;#']", line_contents, 1)
+            if len(annotated_expr) > 1:
+                line_contents = annotated_expr[0]
+
             try:
-                answer = self.calc(self.view, edit, line_contents)
-                self.print_answer(self.view, edit, line, answer)
+                (var_name, answer) = self.calc(line_contents)
+                self.set_local_var(var_name, answer)
+                pretty_answer = self.postprocess_answer(var_name, line_contents, answer)
+                self.print_answer(self.view, edit, line, pretty_answer)
             except Exception as ex:
-                # view.show_popup("<b>Error</b><br>" + str(ex), sublime.HIDE_ON_MOUSE_MOVE_AWAY)
                 self.print_answer(self.view, edit, line, "ERROR")
                 error_regions += [line]
                 error_annotations += [str(ex)]
@@ -233,24 +238,17 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         self.update_vars(edit)
         self.view.set_status('worksheet', "Updated worksheet at " + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
-    def calc(self, view, edit, line_contents):
+    def calc(self, line_contents):
 
-        # Extract custom function definition
+        # Parse custom function or variable declaration
         parts = re.split('=', line_contents)
 
         right_part = parts[0] if len(parts) == 1 else parts[1]
         left_part = None if (len(parts) == 1) else parts[0]
 
-        # Remove end-of-line comment
-        right_parts = re.split("[;#']", right_part)
-        expr = right_parts[0]
-
-        (var, expr) = self.preprocess_expression(left_part, expr, view)
-        answer = eval(expr, globals(), self.local_vars())
-
-        self.set_local_var(var, answer)
-
-        return self.postprocess_answer(var, expr, answer)
+        (var_name, expr) = self.preprocess_expression(left_part, right_part)
+        result = eval(expr, globals(), self.local_vars())
+        return (var_name, result)
 
     def print_answer(self, view, edit, line, answer):
         if not answer:
@@ -263,7 +261,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         else:
             view.insert(edit, line.end(), CR_LF + ans_text)
 
-    def preprocess_expression(self, left, right, view):
+    def preprocess_expression(self, left, right):
         if right:
             # Factorial
             right = re.sub(r'(\d+)!', r'factorial(\1)', right)
@@ -335,7 +333,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
         return left, right
 
-    def postprocess_answer(self, var, expr, answer):
+    def postprocess_answer(self, var_name, expr, answer):
         txt = str(answer) if answer is not None else ""
         if "<function <lambda" in txt:
             return expr
