@@ -405,7 +405,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)\s*\(\s*((?:[a-zA-Z][a-zA-Z0-9_]*)(?:\s*,\s*[a-zA-Z][a-zA-Z0-9_]*)*)\s*\)", left)
                 if m:
                     # Make a lambda-function
-                    return m.group(1).strop(), ("lambda " + m.group(2) + " : " + right.strip())
+                    return m.group(1).strip(), ("lambda " + m.group(2) + " : " + right.strip())
                 # var_name = ...
                 elif re.match(r"[a-zA-Z][a-zA-Z0-9_]*", left):
                     return left.strip(), right.strip()
