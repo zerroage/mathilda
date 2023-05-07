@@ -104,18 +104,25 @@ class ContextHolder:
         self.clear()
 
     class ResultItem:
-        def __init__(self, var_name="", value="", remark="", stack="", section="") -> None:
+        def __init__(self, var_name="", value="", remark="", fmt="", stack="", section="") -> None:
 
-            self.var_name = var_name
+            self.var_name = var_name.strip() if var_name else None
             self.value = value
-            self.remark = remark
-            self.stack = stack
-            self.section = section
+            self.remark = remark.strip()
+            self.fmt = fmt.strip()
+            self.stack = stack.strip()
+            self.section = section.strip()
+
+        def formatted_value(self):
+            if self.fmt:
+                return self.fmt.format(self.value)
+            else:
+                return self.value    
 
     class ResultsHolder:
         def __init__(self, name, remark=""):
-            self.name = name
-            self.remark = remark
+            self.name = name.strip()
+            self.remark = remark.strip()
             self.items = []
 
         def get_item_values_list(self):
@@ -144,16 +151,16 @@ class ContextHolder:
     def get_vars(self):
         return self.vars_dict
 
-    def store_result(self, var_name, value, remark="", push_to_stack=True):
+    def store_result(self, var_name, value, remark="", fmt="", push_to_stack=True):
         # TODO: Don't put stacks on stack :-)
         # if not isinstance(value, list):
 
         stack_name = self.stacks[-1].name if len(self.stacks) > 0 else ""
         section_name = self.sections[-1].name if len(self.sections) > 0 else ""
-        result = self.ResultItem(var_name, value, remark, stack_name, section_name)
+        result = self.ResultItem(var_name, value, remark, fmt, stack_name, section_name)
 
         if var_name:
-            self.vars_dict[var_name] = result
+            self.vars_dict[var_name.strip()] = result
 
         # Save calculation history in execution order
         self.history.append(result)
@@ -236,6 +243,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
             expression = self.view.substr(line).lower().strip()
             remark = ""
+            fmt = ""
             push_to_stack = True
 
             if not expression:
@@ -255,11 +263,17 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 self.context().start_new_section(section_name)
                 continue
 
-            # Process comments
+            # Process remarks
             expression_with_remark = re.split("[;#']", expression, 1)
             if len(expression_with_remark) > 1:
                 expression = expression_with_remark[0].strip()
                 remark = expression_with_remark[1].strip()
+                
+                # Process formatting rules
+                m = re.search(r"\{\S*\}", remark)
+                if m:
+                    fmt = m.group(0)
+                    remark = remark[:m.start(0)] + remark[m.end(0):]
 
             # Process stacks
             if expression.startswith('@'):
@@ -278,21 +292,20 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             # Ignore generated tables
             if expression.startswith('|'):
                 continue
-
-            # Table generator directive
-            if expression.startswith('!'):
-                self.generate_table(self.view, edit, line, expression.lstrip('!'))
-                continue
-
-            # Evaulate line
+            
             try:
+                # Table generator directive
+                if expression.startswith('!'):
+                    self.generate_table(self.view, edit, line, expression.lstrip('!'))
+                    continue
+
+                # Evaulate line
                 (var_name, answer) = self.evaluate(expression)
                 pretty_answer = self.prettify(var_name, expression, answer)
 
-                self.context().store_result(var_name, answer, remark, push_to_stack)
+                self.context().store_result(var_name, answer, remark, fmt, push_to_stack)
                 self.print_answer(self.view, edit, line, pretty_answer)
             except Exception as ex:
-                self.print_answer(self.view, edit, line, "ERROR")
                 error_regions += [line]
                 error_annotations += [str(ex)]
             finally:
@@ -433,7 +446,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         vars_list = re.split('[,;]', expr)
         for var_name in vars_list:
             v = self.context().get_vars()[var_name.strip()]
-            tf.add_row([v.var_name, v.value, v.remark])
+            tf.add_row([v.var_name, v.formatted_value(), v.remark])
 
         pos = line.end() + 1
         # Erase the old table if it exists
