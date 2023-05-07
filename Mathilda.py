@@ -73,6 +73,32 @@ def gibberish(wordcount):
     return ' '.join(random.sample(list(syllables), wordcount))
 
 
+class TableFormatter:
+    
+    def __init__(self) -> None:
+        self.rows = []
+
+    def add_row(self, row):
+        self.rows.append(row)
+
+    def format_table(self):
+        columns = max([len(r) for r in self.rows])
+        column_widths = [max([len(str(r[c])) for r in self.rows if len(r) > c]) for c in range(columns)]
+
+        top_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|\n"
+        divider = "|-" + "-|-".join(['-' * w for w in column_widths]) + "-|\n"
+        bot_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|\n"
+        row_fmt = "| " + " | ".join(['{:%s}' % w for w in column_widths]) + " |\n"
+
+        # Add missing columns to rows
+        padded_rows = [(r + [''] * (columns - len(r))) for r in self.rows]
+
+        # Reminder for myself: '*' unpacks a list to function arguments
+        return "".join([top_div, row_fmt.format(*padded_rows[0]), divider] + 
+                        [row_fmt.format(*r) for r in padded_rows[1:]] +
+                        [bot_div])
+
+
 class ContextHolder:
     def __init__(self) -> None:
         self.clear()
@@ -118,7 +144,7 @@ class ContextHolder:
     def get_vars(self):
         return self.vars_dict
 
-    def store_result(self, var_name, value, remark="", push_to_stack = True):
+    def store_result(self, var_name, value, remark="", push_to_stack=True):
         # TODO: Don't put stacks on stack :-)
         # if not isinstance(value, list):
 
@@ -219,10 +245,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             if expression.startswith('answer'):
                 continue
 
-            # Process basic comments    
+            # Process basic comments
             if expression.startswith(';'):
                 continue
-            
+
             # Process section (header comments)
             if expression.startswith('#'):
                 section_name = expression.lstrip("#")
@@ -248,12 +274,21 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             if expression.startswith('?'):
                 expression = expression.lstrip('?').strip()
                 push_to_stack = False
-                
+
+            # Ignore generated tables
+            if expression.startswith('|'):
+                continue
+
+            # Table generator directive
+            if expression.startswith('!'):
+                self.generate_table(self.view, edit, line, expression.lstrip('!'))
+                continue
+
             # Evaulate line
             try:
                 (var_name, answer) = self.evaluate(expression)
                 pretty_answer = self.prettify(var_name, expression, answer)
-                
+
                 self.context().store_result(var_name, answer, remark, push_to_stack)
                 self.print_answer(self.view, edit, line, pretty_answer)
             except Exception as ex:
@@ -388,6 +423,26 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
         return answer
 
+    def generate_table(self, view, edit, line, expr):
+        if not expr:
+            return
+
+        tf = TableFormatter()
+        tf.add_row(["Var", "Value", "Remark"])
+
+        vars_list = re.split('[,;]', expr)
+        for var_name in vars_list:
+            v = self.context().get_vars()[var_name.strip()]
+            tf.add_row([v.var_name, v.value, v.remark])
+
+        pos = line.end() + 1
+        # Erase the old table if it exists
+        region = view.find("(^\|.*\n)*", pos)
+        if region:
+            view.erase(edit, region)
+        
+        table = tf.format_table()
+        pos += view.insert(edit, pos, table)
 
 class ToggleCommentCommand(MathildaBaseCommand):
 
