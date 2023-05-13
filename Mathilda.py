@@ -74,7 +74,7 @@ def gibberish(wordcount):
 
 
 class TableFormatter:
-    
+
     def __init__(self) -> None:
         self.rows = []
 
@@ -94,9 +94,9 @@ class TableFormatter:
         padded_rows = [(r + [''] * (columns - len(r))) for r in self.rows]
 
         # Reminder for myself: '*' unpacks a list to function arguments
-        return "".join([top_div, row_fmt.format(*padded_rows[0]), divider] + 
-                        [row_fmt.format(*r) for r in padded_rows[1:]] +
-                        [bot_div])
+        return "".join([top_div, row_fmt.format(*padded_rows[0]), divider] +
+                       [row_fmt.format(*r) for r in padded_rows[1:]] +
+                       [bot_div])
 
 
 class ContextHolder:
@@ -117,7 +117,7 @@ class ContextHolder:
             if self.fmt:
                 return self.fmt.format(self.value)
             else:
-                return self.value    
+                return self.value
 
     class ResultsHolder:
         def __init__(self, name, remark=""):
@@ -232,14 +232,11 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         self.context().clear()
         self.context().start_new_stack("__stack", 'Anonymous stack')
         self.view.erase_regions("errors")
-        print("=" * 30) 
         error_regions = []
         error_annotations = []
         point = 0
         limit = 0
-        # f = open('d:\log.txt', 'w') 
-        # sys.stdout = f        
-        while point < self.view.size() and limit < 10:
+        while point < self.view.size() and limit < 10000:
             print("-" * 30, "\nPoint: ", point)
             line = self.view.line(point)
             point = self.view.full_line(point).end()
@@ -274,7 +271,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             if len(expression_with_remark) > 1:
                 expression = expression_with_remark[0].strip()
                 remark = expression_with_remark[1].strip()
-                
+
                 # Process formatting rules
                 m = re.search(r"\{\S*\}", remark)
                 if m:
@@ -298,31 +295,31 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             # Ignore generated tables
             if expression.startswith('|'):
                 continue
-            
+
             try:
                 carret_movement = 0
                 if expression.startswith('!'):
                     # Generate a report table
                     carret_movement = self.generate_table(self.view, edit, line, expression.lstrip('!'))
                 else:
-                    # Evaulate line
+                    # Evaulate expression
                     (var_name, answer) = self.evaluate(expression)
                     pretty_answer = self.prettify(var_name, expression, answer)
 
                     self.context().store_result(var_name, answer, remark, fmt, push_to_stack)
                     carret_movement = self.print_answer(self.view, edit, line, pretty_answer)
-                   
+
             except Exception as ex:
                 error_regions += [line]
                 error_annotations += [str(ex)]
             finally:
-                print("Carrent movement: ", carret_movement)
-                point = line.end() + carret_movement + 1 # 
+                print("Carret movement: ", carret_movement)
+                point = line.end() + carret_movement + 1
                 print("Next point: ", point)
                 limit += 1
                 # Move the carret only when 'Enter' key was pressed
                 # if new_line:
-                    # self.move_carret(edit, carret_movement)
+                # self.move_carret(edit, carret_movement)
 
         if error_regions:
             self.view.add_regions("errors", error_regions,
@@ -337,7 +334,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         for region in self.view.sel():
             print("Processing region", region)
             print("Movement", movement)
-            
+
             line = self.view.line(region)
             print("Processing line", line)
 
@@ -359,7 +356,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             self.view.sel().clear()
             self.view.insert(edit, new_carret_pos, CR_LF)
             self.view.sel().add(new_carret_pos + 1 if eof else new_carret_pos)
-        
+
     def evaluate(self, expr):
         expr = self.desugar_expression(expr)
         (var_name, expr) = self.parse_var_or_function_declaration(expr)
@@ -370,7 +367,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
     def print_answer(self, view, edit, line, answer):
         if not answer:
             return 0
-        prev_answer_pos = line.end() + 1 # Take into account the new line character
+        prev_answer_pos = line.end() + 1  # Take into account the new line character
         prev_answer_line = view.find(ANSWER_PATTERN, prev_answer_pos)
         # Erase previous answer if it exists
         if prev_answer_line is not None and 0 < prev_answer_line.begin() <= prev_answer_pos:
@@ -474,10 +471,11 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         region = view.find("(^\|.*\n)*", pos)
         if region:
             view.erase(edit, region)
-        
+
         table = tf.format_table()
         pos += view.insert(edit, pos, table)
         return len(table)
+
 
 class ToggleCommentCommand(MathildaBaseCommand):
 
