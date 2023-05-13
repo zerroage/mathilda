@@ -454,7 +454,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
         pos = line.end()
         # Erase the old table if it exists
-        region = view.find("(\n*^\|.*\n?)*", pos)
+        region = view.find("(\n*^\|.*)*", pos)
         if region:
             view.erase(edit, region)
 
