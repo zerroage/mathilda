@@ -87,8 +87,8 @@ class TableFormatter:
 
         top_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|\n"
         divider = "|-" + "-|-".join(['-' * w for w in column_widths]) + "-|\n"
-        bot_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|\n"
         row_fmt = "| " + " | ".join(['{:%s}' % w for w in column_widths]) + " |\n"
+        bot_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|"  # Ending new line will be inserted separately
 
         # Add missing columns to rows
         padded_rows = [(r + [''] * (columns - len(r))) for r in self.rows]
@@ -236,15 +236,11 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         error_annotations = []
         point = 0
         limit = 0
+
         while point < self.view.size() and limit < 10000:
-            print("-" * 30, "\nPoint: ", point)
             line = self.view.line(point)
             point = self.view.full_line(point).end()
-            print("Line", line)
-
             expression = self.view.substr(line).lower().strip()
-
-            print("Expression", expression)
             remark = ""
             fmt = ""
             push_to_stack = True
@@ -296,30 +292,25 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             if expression.startswith('|'):
                 continue
 
+            chars_inserted = 0
             try:
-                carret_movement = 0
                 if expression.startswith('!'):
                     # Generate a report table
-                    carret_movement = self.generate_table(self.view, edit, line, expression.lstrip('!'))
+                    chars_inserted = self.generate_table(self.view, edit, line, expression.lstrip('!'))
                 else:
                     # Evaulate expression
                     (var_name, answer) = self.evaluate(expression)
                     pretty_answer = self.prettify(var_name, expression, answer)
 
                     self.context().store_result(var_name, answer, remark, fmt, push_to_stack)
-                    carret_movement = self.print_answer(self.view, edit, line, pretty_answer)
+                    chars_inserted = self.print_answer(self.view, edit, line, pretty_answer)
 
             except Exception as ex:
                 error_regions += [line]
                 error_annotations += [str(ex)]
             finally:
-                print("Carret movement: ", carret_movement)
-                point = line.end() + carret_movement + 1
-                print("Next point: ", point)
+                point = line.end() + chars_inserted + 1
                 limit += 1
-                # Move the carret only when 'Enter' key was pressed
-                # if new_line:
-                # self.move_carret(edit, carret_movement)
 
         if error_regions:
             self.view.add_regions("errors", error_regions,
@@ -327,35 +318,30 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                                   sublime.DRAW_NO_OUTLINE | sublime.DRAW_NO_FILL | sublime.DRAW_SQUIGGLY_UNDERLINE,
                                   error_annotations)
 
+        # Move the carret only when 'Enter' key was pressed
+        if new_line:
+            point = self.move_carret(edit)
+
         self.update_vars(edit)
         self.view.set_status('worksheet', "Updated on " + strftime("%Y-%m-%d at %H:%M:%S", gmtime()))
 
-    def move_carret(self, edit, movement):
-        for region in self.view.sel():
-            print("Processing region", region)
-            print("Movement", movement)
+    def move_carret(self, edit):
+        # At this moment all carrets are at the last character(s) of answer line(s)
+        # Add an empty line or move carret to the next empty line if exists
+        print("-" * 30)
+        
+        for s in self.view.sel():
+            print("Selected region,", s)
+            pos = s.end() + 1
+            print("New line position", pos)
+            line = self.view.line(pos)
+            print("Line", line, "empty?", line.empty())
+            if line.empty():
+                print("Removing empty line", line)
+                self.view.erase(edit, self.view.full_line(pos))
+            print("Insert CRLF at position", s.end())
+            self.view.insert(edit, s.end(), CR_LF)
 
-            line = self.view.line(region)
-            print("Processing line", line)
-
-            # Move carret after the line with the answer
-            # ans_line = self.view.find(ANSWER_PATTERN, line.end() + 1)
-            # eof = False
-            # if ans_line and 0 < ans_line.begin() <= line.end() + 1:
-            #    reg = ans_line.end() + 1
-            # else:
-            #    reg = line.end() + 1
-
-            new_carret_pos = line.end() + movement
-            print("New carret pos", new_carret_pos)
-            if new_carret_pos > self.view.size():
-                new_carret_pos = self.view.size()
-                eof = True
-                print("Setting EOF to 'True'")
-
-            self.view.sel().clear()
-            self.view.insert(edit, new_carret_pos, CR_LF)
-            self.view.sel().add(new_carret_pos + 1 if eof else new_carret_pos)
 
     def evaluate(self, expr):
         expr = self.desugar_expression(expr)
@@ -466,13 +452,13 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             v = self.context().get_vars()[var_name.strip()]
             tf.add_row([v.var_name, v.formatted_value(), v.remark])
 
-        pos = line.end() + 1
+        pos = line.end()
         # Erase the old table if it exists
-        region = view.find("(^\|.*\n)*", pos)
+        region = view.find("(\n*^\|.*\n?)*", pos)
         if region:
             view.erase(edit, region)
 
-        table = tf.format_table()
+        table = CR_LF + tf.format_table()
         pos += view.insert(edit, pos, table)
         return len(table)
 
