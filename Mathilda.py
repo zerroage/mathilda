@@ -9,13 +9,13 @@ from fractions import Fraction
 from functools import reduce
 from math import *
 from time import gmtime, strftime
-
+import sys
 import sublime
 import sublime_plugin
 from dateutil.relativedelta import relativedelta
 
 ANSWER_LINE = "\t\t\tAnswer = "
-ANSWER_PATTERN = "^\\s*Answer\\s*=\\s*.*$"
+ANSWER_PATTERN = "^\\s*Answer\\s*=\\s*.*$\n?"
 CR_LF = "\n"
 
 
@@ -232,16 +232,22 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         self.context().clear()
         self.context().start_new_stack("__stack", 'Anonymous stack')
         self.view.erase_regions("errors")
-
+        print("=" * 30) 
         error_regions = []
         error_annotations = []
         point = 0
         limit = 0
-        while point < self.view.size() and limit < 10000:
+        # f = open('d:\log.txt', 'w') 
+        # sys.stdout = f        
+        while point < self.view.size() and limit < 10:
+            print("-" * 30, "\nPoint: ", point)
             line = self.view.line(point)
-            point = line.end() + 1
+            point = self.view.full_line(point).end()
+            print("Line", line)
 
             expression = self.view.substr(line).lower().strip()
+
+            print("Expression", expression)
             remark = ""
             fmt = ""
             push_to_stack = True
@@ -294,22 +300,29 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 continue
             
             try:
-                # Table generator directive
+                carret_movement = 0
                 if expression.startswith('!'):
-                    self.generate_table(self.view, edit, line, expression.lstrip('!'))
-                    continue
+                    # Generate a report table
+                    carret_movement = self.generate_table(self.view, edit, line, expression.lstrip('!'))
+                else:
+                    # Evaulate line
+                    (var_name, answer) = self.evaluate(expression)
+                    pretty_answer = self.prettify(var_name, expression, answer)
 
-                # Evaulate line
-                (var_name, answer) = self.evaluate(expression)
-                pretty_answer = self.prettify(var_name, expression, answer)
-
-                self.context().store_result(var_name, answer, remark, fmt, push_to_stack)
-                self.print_answer(self.view, edit, line, pretty_answer)
+                    self.context().store_result(var_name, answer, remark, fmt, push_to_stack)
+                    carret_movement = self.print_answer(self.view, edit, line, pretty_answer)
+                   
             except Exception as ex:
                 error_regions += [line]
                 error_annotations += [str(ex)]
             finally:
+                print("Carrent movement: ", carret_movement)
+                point = line.end() + carret_movement + 1 # 
+                print("Next point: ", point)
                 limit += 1
+                # Move the carret only when 'Enter' key was pressed
+                # if new_line:
+                    # self.move_carret(edit, carret_movement)
 
         if error_regions:
             self.view.add_regions("errors", error_regions,
@@ -317,28 +330,36 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                                   sublime.DRAW_NO_OUTLINE | sublime.DRAW_NO_FILL | sublime.DRAW_SQUIGGLY_UNDERLINE,
                                   error_annotations)
 
-        if new_line:
-            for region in self.view.sel():
-                line = self.view.line(region)
-
-                ans_line = self.view.find(ANSWER_PATTERN, line.end() + 1)
-                eof = False
-                if ans_line is not None and 0 < ans_line.begin() <= line.end() + 1:
-                    reg = ans_line.end() + 1
-                else:
-                    reg = line.end() + 1
-
-                if reg > self.view.size():
-                    reg = self.view.size()
-                    eof = True
-
-                self.view.sel().clear()
-                self.view.insert(edit, reg, CR_LF)
-                self.view.sel().add(reg + 1 if eof else reg)
-
         self.update_vars(edit)
-        self.view.set_status('worksheet', "Updated worksheet at " + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+        self.view.set_status('worksheet', "Updated on " + strftime("%Y-%m-%d at %H:%M:%S", gmtime()))
 
+    def move_carret(self, edit, movement):
+        for region in self.view.sel():
+            print("Processing region", region)
+            print("Movement", movement)
+            
+            line = self.view.line(region)
+            print("Processing line", line)
+
+            # Move carret after the line with the answer
+            # ans_line = self.view.find(ANSWER_PATTERN, line.end() + 1)
+            # eof = False
+            # if ans_line and 0 < ans_line.begin() <= line.end() + 1:
+            #    reg = ans_line.end() + 1
+            # else:
+            #    reg = line.end() + 1
+
+            new_carret_pos = line.end() + movement
+            print("New carret pos", new_carret_pos)
+            if new_carret_pos > self.view.size():
+                new_carret_pos = self.view.size()
+                eof = True
+                print("Setting EOF to 'True'")
+
+            self.view.sel().clear()
+            self.view.insert(edit, new_carret_pos, CR_LF)
+            self.view.sel().add(new_carret_pos + 1 if eof else new_carret_pos)
+        
     def evaluate(self, expr):
         expr = self.desugar_expression(expr)
         (var_name, expr) = self.parse_var_or_function_declaration(expr)
@@ -348,14 +369,14 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
     def print_answer(self, view, edit, line, answer):
         if not answer:
-            return
-
-        ans_line = view.find(ANSWER_PATTERN, line.end() + 1)
-        ans_text = ANSWER_LINE + str(answer)
-        if ans_line is not None and 0 < ans_line.begin() <= line.end() + 1:
-            view.replace(edit, ans_line, ans_text)
-        else:
-            view.insert(edit, line.end(), CR_LF + ans_text)
+            return 0
+        prev_answer_pos = line.end() + 1 # Take into account the new line character
+        prev_answer_line = view.find(ANSWER_PATTERN, prev_answer_pos)
+        # Erase previous answer if it exists
+        if prev_answer_line is not None and 0 < prev_answer_line.begin() <= prev_answer_pos:
+            view.erase(edit, prev_answer_line)
+        answer_text = CR_LF + ANSWER_LINE + str(answer)
+        return view.insert(edit, line.end(), answer_text)
 
     def desugar_expression(self, expr):
         # Factorial
@@ -438,7 +459,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
     def generate_table(self, view, edit, line, expr):
         if not expr:
-            return
+            return 0
 
         tf = TableFormatter()
         tf.add_row(["Var", "Value", "Remark"])
@@ -456,6 +477,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         
         table = tf.format_table()
         pos += view.insert(edit, pos, table)
+        return len(table)
 
 class ToggleCommentCommand(MathildaBaseCommand):
 
