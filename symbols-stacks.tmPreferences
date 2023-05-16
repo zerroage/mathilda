@@ -5,7 +5,7 @@
         <key>name</key>
         <string>Stack symbols</string>
         <key>scope</key>
-        <string>markup.raw.block</string>
+        <string>entity.name.section</string>
         <key>settings</key>
         <dict>
             <key>showInSymbolList</key>
