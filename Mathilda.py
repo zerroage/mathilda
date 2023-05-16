@@ -2,14 +2,12 @@ import itertools
 import random
 import re
 import string
-import traceback
 from collections import OrderedDict
 from datetime import date, datetime, timedelta
 from fractions import Fraction
 from functools import reduce
 from math import *
 from time import gmtime, strftime
-import sys
 import sublime
 import sublime_plugin
 from dateutil.relativedelta import relativedelta
@@ -18,6 +16,10 @@ ANSWER_LINE = "\t\t\tAnswer = "
 ANSWER_PATTERN = "^\\s*Answer\\s*=\\s*.*$\n?"
 CR_LF = "\n"
 
+# 'Enter' key behaviour when pressed inside an expression (non only in the end of a line):
+# False just inserts a new line
+# True behaves like if 'Enter' key was pressed in the end of line: evaluate line and print answer
+EVAL_ON_PRESSING_ENTER_INSIDE_EXPRESSION = True
 
 # Useful math functions
 
@@ -237,6 +239,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         point = 0
         limit = 0
 
+        # Move the carret only when 'Enter' key was pressed
+        if new_line:
+            self.pre_move_carret(edit)
+
         while point < self.view.size() and limit < 10000:
             line = self.view.line(point)
             point = self.view.full_line(point).end()
@@ -320,26 +326,30 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
         # Move the carret only when 'Enter' key was pressed
         if new_line:
-            point = self.move_carret(edit)
+            self.move_carret(edit)
 
         self.update_vars(edit)
         self.view.set_status('worksheet', "Updated on " + strftime("%Y-%m-%d at %H:%M:%S", gmtime()))
 
+    def pre_move_carret(self, edit):
+        # At this moment expressions are not evaluated yet
+        # Depending on the configuration we either insert a new line, or move the carret to the end of line
+        
+        for (i,s) in enumerate(self.view.sel()):
+            if EVAL_ON_PRESSING_ENTER_INSIDE_EXPRESSION:
+                line = self.view.line(s)
+                del self.view.sel()[i]
+                self.view.sel().add(line.end())
+
     def move_carret(self, edit):
         # At this moment all carrets are at the last character(s) of answer line(s)
         # Add an empty line or move carret to the next empty line if exists
-        print("-" * 30)
         
         for s in self.view.sel():
-            print("Selected region,", s)
             pos = s.end() + 1
-            print("New line position", pos)
             line = self.view.line(pos)
-            print("Line", line, "empty?", line.empty())
-            if line.empty():
-                print("Removing empty line", line)
+            if line.empty() or len(self.view.substr(line).strip()) == 0:
                 self.view.erase(edit, self.view.full_line(pos))
-            print("Insert CRLF at position", s.end())
             self.view.insert(edit, s.end(), CR_LF)
 
 
