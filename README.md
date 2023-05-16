@@ -5,13 +5,13 @@ It transforms your SublimeText editor into a powerful calculator/worksheet.
 
 ![SublimeText screenshot](img/screenshot-1.png "SublimeText screenshot")
 
-## How to install and use it
+## Installlation & quick start
 
-* Put all files under the `$SUBLIME_SETTINGS/Packages/sublime-calc` directory
-* Start SublimeText3 editor
+* Put all files under the `$SUBLIME_SETTINGS/Packages/Mathilda` directory
+* Start SublimeText editor
 * Create a new file
-* Set file syntax to **Worksheet**
-* Start typing expressions, then press ENTER
+* Set file syntax to **Mathilda** (Press `Ctrl-P`, type *Mathilda* and choose the *Set Syntax: Mathilda* menu item)
+* Start typing an expression, then press `Enter` key
 * The answer will automatically appear on the next line
 
 ## Features
@@ -122,13 +122,13 @@ volume = pi * radius**2 * height
 
 ```
 volume(radius, height) = pi * radius**2 * height
-			Answer = lambda radius,height : pi*radius**2*height
+			Answer = volume(radius, height) = pi * radius**2 * height
 
 volume(5, 5)
 			Answer = 392.69908169872417
 
 c(n, k) = factorial(n) / (factorial (k) * factorial(n - k))
-			Answer = lambda n,k : factorial(n)/(factorial(k)*factorial(n-k))
+			Answer = c(n, k) = factorial(n) / (factorial (k) * factorial(n - k))
       
 c(10, 5)
 			Answer = 252.0
@@ -139,34 +139,44 @@ It's allowed to use built-in functions inside a custom function definition. Defi
 ### Named stacks
 
 A worksheet may contain several named stacks. A named stack starts with the `@` character followed by a stack name. 
-All calculations within the stack are collected into an array with the variable name corresponding to the stack name. Elements of this array can be accessed using the `[n]` syntax, or the variable can be passed to a function with an array argument (`sum()` or `prod()`).
+All calculations within the stack are collected into an array with the variable name corresponding to the stack name. Elements of this array can be accessed using the `[n]` syntax, or the variable can be passed to a function with an array argument (`sum()` or `prod()`). 
 
 First stack element (with index 0) is always the last answer. Second stack element (with index 1) is the previous answer, etc. 
 
 Example:
 
 ```
-; open a new stack
-@mystack
+; Open a new stack
+@supermarket
 
-var1 = 1
-			Answer = 1
-var2 = 3.14
-			Answer = 3.14
-; access stack items: mystack[0] is the last answer, mystack[1] is previous answer
-mystack[0] + mystack[1]
-			Answer = 4.140000000000001
-; previous answer has been put onto the stack too, so `sum()` returns sum of all items previous items
-sum(mystack)
-			Answer = 8.280000000000001
+apples = 5.21
+			Answer = 5.21
+milk = 1.33
+			Answer = 1.33
 
+; When a line starts with '?', result is not saved into the stack
+; '@@' always refers to the currently opened stack
+? sum(@@) ; subtotal
+			Answer = 6.54
+
+; Open another stack
+@diy
+
+screwdriver = 17.95
+			Answer = 17.95
+hammer = 11.45
+			Answer = 11.45
+@total
+
+sum(supermarket) + sum(diy)
+			Answer = 35.94
 ```
 
 ### Anynymous stacks
 
 By default an anonymous stack is created for the entire worksheet.
 
-The `@@` variable references to the entire stack, it can be passed to a function with an array argument, e.g. `sum(@@)` or `prod(@@)`.
+The `@@` variable refers to the entire stack, it can be passed to a function with an array argument, e.g. `sum(@@)` or `prod(@@)`.
 
 It's also possible to access stack elements: 
 * `@` references to the last answer
@@ -204,12 +214,54 @@ sum(@@)
 ###### Heading level 6
 ```
 
+Comments also can be used to annotate and format variables as shown below:
+
+```
+apples = 5.21 ; golden + grany smith
+			Answer = 5.21
+milk = 1.33 ; 2.5 liter
+			Answer = 1.33
+```
+
+This annotation is shown in the "Remark" colulmn in the table (see below)
+
 Headings allow to navigate quickly through the worksheeet with the *Symbols* popup (`Ctrl + R`).
+
+### Tables
+
+! This is experimental feature and is subject of change in the future.
+
+It's possible to display "report" tables built from variables: start a new line with the `!` character and enumerate variables to report. The table is partially compatible with Markdown syntax (exept the top and bottom lines).
+
+```
+apples = 5.21 ; golden + grany smith
+			Answer = 5.21
+milk = 1.33 ; 2.5 liter
+			Answer = 1.33
+
+screwdriver = 17.95 ; makita
+			Answer = 17.95
+hammer = 11.45
+			Answer = 11.45
+total = sum(@@)
+			Answer = 35.94
+! apples, milk, screwdriver, hammer, total
+|--------------------------------------------|
+| Var         | Value | Remark               |
+|-------------|-------|----------------------|
+| apples      |  5.21 | golden + grany smith |
+| milk        |  1.33 | 2.5 liter            |
+| screwdriver | 17.95 | makita               |
+| hammer      | 11.45 |                      |
+| total       | 35.94 |                      |
+|--------------------------------------------|
+
+```
 
 ## Useful shortcuts
 
-* Press F5 to recalculate entire worksheet
-* Press F2 to display a list of defined variables
-* Start typing a new line with + - * / to automatically use the previous answer
-* Use CTRL+/ to comment/uncomment a line
-* Comments are also symbols, use CTRL+R to navigate the worksheet
+* Press `F5` to recalculate entire worksheet (also happens on pressing the `Enter` key);
+* To insert just a new line without recalculating use `Shift + Enter` shortcut;
+* Press `F2` to display a list of defined variables;
+* Start typing one of  `+`, `-`, `*`, or `/` characters on a new line to automatically use the previous answer;
+* Comments and stacks are symbols, use CTRL+R to navigate the worksheet.
