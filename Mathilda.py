@@ -353,10 +353,9 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             self.view.insert(edit, s.end(), CR_LF)
 
 
-    def evaluate(self, expr):
-        expr = self.desugar_expression(expr)
+    def evaluate(self, expr):        
         (var_name, expr) = self.parse_var_or_function_declaration(expr)
-
+        expr = self.desugar_expression(expr)
         result = eval(expr, globals(), self.context().get_evaluation_context())
         return (var_name, result)
 
@@ -373,7 +372,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
     def desugar_expression(self, expr):
         # Factorial
-        expr = re.sub(r'(\d+)!', r'factorial(\1)', expr)
+        expr = re.sub(r'([0-9a-zA-Z_]+)!', r'factorial(\1)', expr)
 
         # Unicode symbols
         expr = re.sub(r'(?u)\u00f7', '/', expr)
@@ -394,10 +393,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         expr = re.sub(r'(?u)\u221c\((.+?)\)', r'(\1)**(1/4)', expr)
 
         # Percent arithmetic: A */ N% transforms to A */ (N ÷ 100)
-        expr = re.sub(r'([*/])\s*([0-9.]+)%', r'\1(\2/100)', expr)
+        expr = re.sub(r'([*/])\s*([0-9.a-zA-Z_]+)%', r'\1(\2/100)', expr)
 
         # Percent arithmetic: A ± N% transforms to A ± A * (N ÷ 100)
-        expr = re.sub(r'([+-])\s*([0-9.]+)%', r'*(1\1\2/100)', expr)
+        expr = re.sub(r'([+-])\s*([0-9.a-zA-Z_]+)%', r'*(1\1\2/100)', expr)
 
         # M:N transforms to Fraction(M, N)
         expr = re.sub(r'(\d+):(\d+)', r'Fraction(\1, \2)', expr)
@@ -429,12 +428,12 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             (left, right) = re.split('=|:=', expr, 1)
             if left and right:
                 # fun_name(arg1, arg2, ...) = ...
-                m = re.match(r"([a-zA-Z][a-zA-Z0-9_]*)\s*\(\s*((?:[a-zA-Z][a-zA-Z0-9_]*)(?:\s*,\s*[a-zA-Z][a-zA-Z0-9_]*)*)\s*\)", left)
+                m = re.match(r"^([a-zA-Z][a-zA-Z0-9_]*)\s*\(\s*((?:[a-zA-Z][a-zA-Z0-9_]*)(?:\s*,\s*[a-zA-Z][a-zA-Z0-9_]*)*)\s*\)", left)
                 if m:
                     # Make a lambda-function
                     return m.group(1).strip(), ("lambda " + m.group(2) + " : " + right.strip())
                 # var_name = ...
-                elif re.match(r"[a-zA-Z][a-zA-Z0-9_]*", left):
+                elif re.match(r"^[a-zA-Z][a-zA-Z0-9_]*", left):
                     return left.strip(), right.strip()
 
             raise Exception("Invalid function or variable declaration: <i>%s</i>" % expr)
