@@ -229,7 +229,7 @@ Headings allow to navigate quickly through the worksheeet with the *Symbols* pop
 
 ### Tables
 
-! This is experimental feature and is subject of change in the future.
+⚠️ This is experimental feature and is subject to change in the future.
 
 It's possible to display "report" tables built from variables: start a new line with the `!` character and enumerate variables to report. The table is partially compatible with Markdown syntax (exept the top and bottom lines).
 
