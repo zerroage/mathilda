@@ -65,4 +65,6 @@ contexts:
         2: markup.raw.block constant.numeric
         3: markup.raw.block comment
 
-    
+    - match: "^\\|.*\\|$"
+      scope: markup.raw.block 
+   

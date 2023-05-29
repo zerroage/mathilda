@@ -258,6 +258,46 @@ total = sum(@@)
 
 ```
 
+It's possible to print stack variables as well:
+
+```
+@diy
+
+screwdriver = 17.95
+			Answer = 17.95
+hammer = 11.45
+			Answer = 11.45
+@supermarket
+
+apples = 5.21
+			Answer = 5.21
+milk = 1.33
+			Answer = 1.33
+
+@grand_total
+
+total = sum(supermarket) + sum(diy)
+			Answer = 35.94
+! diy, supermarket, grand_total
+|------------------------------|
+| Var         | Value | Remark |
+|-------------|-------|--------|
+| diy                          |
+|------------------------------|
+| screwdriver | 17.95 |        |
+| hammer      | 11.45 |        |
+|------------------------------|
+| supermarket                  |
+|------------------------------|
+| milk        |  1.33 |        |
+| apples      |  5.21 |        |
+|------------------------------|
+| grand_total                  |
+|------------------------------|
+| total       | 35.94 |        |
+|------------------------------|
+```
+
 ## Useful shortcuts
 
 * Press `F5` to recalculate entire worksheet (also happens on pressing the `Enter` key);

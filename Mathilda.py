@@ -77,29 +77,55 @@ def gibberish(wordcount):
 
 class TableFormatter:
 
-    def __init__(self) -> None:
-        self.rows = []
+    def __init__(self, headers) -> None:
+        self.headers = headers
+        self.current_row_group = ""
+        self.row_groups = OrderedDict()
+        self.start_row_group()
 
     def add_row(self, row):
-        self.rows.append(row)
+        self.row_groups[self.current_row_group].append(row)
+        
+    def start_row_group(self, group_name = ""):
+        self.current_row_group = group_name
+        if not group_name in self.row_groups:
+            self.row_groups[group_name] = []
 
     def format_table(self):
-        columns = max([len(r) for r in self.rows])
-        column_widths = [max([len(str(r[c])) for r in self.rows if len(r) > c]) for c in range(columns)]
+        # Flatten list of lists (returned by dict.values() method)
+        all_rows = [self.headers] + list(itertools.chain(*self.row_groups.values())) 
+        
+        columns = max([len(r) for r in all_rows])
+        column_widths = [max([len(str(r[c])) for r in all_rows if len(r) > c]) for c in range(columns)]
 
         top_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|\n"
         divider = "|-" + "-|-".join(['-' * w for w in column_widths]) + "-|\n"
         row_fmt = "| " + " | ".join(['{:%s}' % w for w in column_widths]) + " |\n"
-        bot_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|"  # Ending new line will be inserted separately
+        sub_fmt = "| " + "{:%s}" % (sum(column_widths) + 2 * columns) + " |\n" # plus two extra spaces per colulmn
+        mid_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|\n"   # Ending new line will be inserted separately
+        bot_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|"   # Ending new line will be inserted separately
 
-        # Add missing columns to rows
-        padded_rows = [(r + [''] * (columns - len(r))) for r in self.rows]
+        r = []
+        for k, v in self.row_groups.items():
+            if len(v) > 0:
+                # Do not add middle divider at the first position
+                if len(r) > 0:
+                    r += [mid_div]
+                if len(k.strip()) > 0:
+                    r += [self.format_row(sub_fmt, [k], 1)]
+                    r += [mid_div]
+                r += [self.format_row(row_fmt, r, columns) for r in v]
 
         # Reminder for myself: '*' unpacks a list to function arguments
-        return "".join([top_div, row_fmt.format(*padded_rows[0]), divider] +
-                       [row_fmt.format(*r) for r in padded_rows[1:]] +
+        return "".join([top_div, self.format_row(row_fmt, self.headers, columns), divider] +
+                    #    [self.format_row(row_fmt, r, columns) for r in all_rows] +
+                       r +
                        [bot_div])
 
+    def format_row(self, format_str, row, num_of_columns):
+        # Add missing columns to rows
+        fmt_params = row + [''] * (num_of_columns - len(row))
+        return format_str.format(*fmt_params)
 
 class ContextHolder:
     def __init__(self) -> None:
@@ -152,6 +178,12 @@ class ContextHolder:
 
     def get_vars(self):
         return self.vars_dict
+    
+    def has_stack(self, stack_name):
+        return stack_name in [s.name for s in self.stacks]
+    
+    def get_stack_vars(self, stack_name):
+        return {k: v for k, v in self.vars_dict.items() if v.stack == stack_name}
 
     def store_result(self, var_name, value, remark="", fmt="", push_to_stack=True):
         # TODO: Don't put stacks on stack :-)
@@ -453,13 +485,20 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         if not expr:
             return 0
 
-        tf = TableFormatter()
-        tf.add_row(["Var", "Value", "Remark"])
+        tf = TableFormatter(["Var", "Value", "Remark"])
 
         vars_list = re.split('[,;]', expr)
         for var_name in vars_list:
-            v = self.context().get_vars()[var_name.strip()]
-            tf.add_row([v.var_name, v.formatted_value(), v.remark])
+            var_name = var_name.strip()
+            if var_name in self.context().get_vars():
+                v = self.context().get_vars()[var_name]
+                tf.add_row([v.var_name, v.formatted_value(), v.remark])
+            elif self.context().has_stack(var_name):
+                stack_vars = self.context().get_stack_vars(var_name)
+                tf.start_row_group(var_name)
+                for k, v in stack_vars.items():
+                    tf.add_row([v.var_name, v.formatted_value(), v.remark])
+                tf.start_row_group()    
 
         pos = line.end()
         # Erase the old table if it exists
