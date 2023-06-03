@@ -121,8 +121,9 @@ class TableFormatter:
                 r += [self.format_row(row_fmt, r, columns) for r in v]
 
         # Reminder for myself: '*' unpacks a list to function arguments
-        return "".join([top_div, self.format_row(row_fmt, self.headers, columns), divider] +
-                    #    [self.format_row(row_fmt, r, columns) for r in all_rows] +
+        return "".join([top_div] + 
+                       [self.format_row(row_fmt, self.headers, columns)] +
+                       [divider if len(self.row_groups) == 1 or len(self.row_groups[""]) > 0 else mid_div] +
                        r +
                        [bot_div])
 
