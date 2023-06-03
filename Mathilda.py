@@ -21,6 +21,10 @@ CR_LF = "\n"
 # True behaves like if 'Enter' key was pressed in the end of line: evaluate line and print answer
 EVAL_ON_PRESSING_ENTER_INSIDE_EXPRESSION = True
 
+# When set to 'True', anonymous values (without named variables) from stacks are shown in a table,
+# otherwise only stack variables are shown. 
+SHOW_ANONYMOUS_VALUES_IN_TABLE = True
+
 # Useful math functions
 
 
@@ -183,7 +187,7 @@ class ContextHolder:
         return stack_name in [s.name for s in self.stacks]
     
     def get_stack_vars(self, stack_name):
-        return {k: v for k, v in self.vars_dict.items() if v.stack == stack_name}
+        return [v for v in self.history if v.stack == stack_name]
 
     def store_result(self, var_name, value, remark="", fmt="", push_to_stack=True):
         # TODO: Don't put stacks on stack :-)
@@ -197,7 +201,8 @@ class ContextHolder:
             self.vars_dict[var_name.strip()] = result
 
         # Save calculation history in execution order
-        self.history.append(result)
+        if push_to_stack:
+            self.history.append(result)
 
         # Add to the currently active stack and section
         if len(self.stacks) > 0 and push_to_stack:
@@ -496,8 +501,9 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             elif self.context().has_stack(var_name):
                 stack_vars = self.context().get_stack_vars(var_name)
                 tf.start_row_group(var_name)
-                for k, v in stack_vars.items():
-                    tf.add_row([v.var_name, v.formatted_value(), v.remark])
+                for v in stack_vars:
+                    if v.var_name or SHOW_ANONYMOUS_VALUES_IN_TABLE:
+                        tf.add_row([v.var_name if v.var_name else "", v.formatted_value(), v.remark])
                 tf.start_row_group()    
 
         pos = line.end()
