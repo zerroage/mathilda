@@ -177,7 +177,10 @@ class ContextHolder:
         context.update(stacks_dict)
 
         context['__CURRENT_STACK'] = self.stacks[-1].get_item_values_list() if len(self.stacks) > 0 else []
-        context['ans'] = self.history[-1].value if len(self.history) > 0 else 0
+        ans = self.history[-1].value if len(self.history) > 0 else 0
+        context['ans'] = ans
+        context['Ans'] = ans
+        context['ANS'] = ans
 
         return context
 
@@ -284,7 +287,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         while point < self.view.size() and limit < 10000:
             line = self.view.line(point)
             point = self.view.full_line(point).end()
-            expression = self.view.substr(line).lower().strip()
+            expression = self.view.substr(line).strip()
             remark = ""
             fmt = ""
             push_to_stack = True
@@ -293,7 +296,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 continue
 
             # Process lines with answers
-            if expression.startswith('answer'):
+            if expression.lower().startswith('answer'):
                 continue
 
             # Process basic comments
