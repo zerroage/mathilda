@@ -417,20 +417,21 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
         # Unicode symbols
         expr = re.sub(r'(?u)\u00f7', '/', expr)
-        expr = re.sub(r'(?u)\u00d7', '*', expr)
+        expr = re.sub(r'(?u)\u00d7', '*', expr) # ×
+        expr = re.sub(r'(?u)\u22c5', '*', expr) # ⋅
         expr = re.sub(r'(?u)\u00b2', '**2', expr)
         expr = re.sub(r'(?u)\u00b3', '**3', expr)
-        expr = re.sub(r'(?u)\u00b4', '**4', expr)
-        expr = re.sub(r'(?u)\u00b5', '**5', expr)
-        expr = re.sub(r'(?u)\u00b6', '**6', expr)
-        expr = re.sub(r'(?u)\u00b7', '**7', expr)
-        expr = re.sub(r'(?u)\u00b8', '**8', expr)
-        expr = re.sub(r'(?u)\u00b29', '**9', expr)
-        expr = re.sub(r'(?u)\u221a([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/2)', expr)
+        expr = re.sub(r'(?u)\u2074', '**4', expr)
+        expr = re.sub(r'(?u)\u2075', '**5', expr)
+        expr = re.sub(r'(?u)\u2076', '**6', expr)
+        expr = re.sub(r'(?u)\u2077', '**7', expr)
+        expr = re.sub(r'(?u)\u2078', '**8', expr)
+        expr = re.sub(r'(?u)\u2079', '**9', expr)
+        expr = re.sub(r'(?u)\u221a([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/2)', expr) # √
         expr = re.sub(r'(?u)\u221a\((.+?)\)', r'(\1)**(1/2)', expr)
-        expr = re.sub(r'(?u)\u221b([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/3)', expr)
+        expr = re.sub(r'(?u)\u221b([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/3)', expr) # ∛
         expr = re.sub(r'(?u)\u221b\((.+?)\)', r'(\1)**(1/3)', expr)
-        expr = re.sub(r'(?u)\u221c([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/4)', expr)
+        expr = re.sub(r'(?u)\u221c([0-9.a-zA-Z_]+?\b)', r'(\1)**(1/4)', expr) # ∜
         expr = re.sub(r'(?u)\u221c\((.+?)\)', r'(\1)**(1/4)', expr)
 
         # Percent arithmetic: A */ N% transforms to A */ (N ÷ 100)
