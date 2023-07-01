@@ -11,6 +11,8 @@ from time import gmtime, strftime
 import sublime
 import sublime_plugin
 from dateutil.relativedelta import relativedelta
+import mathilda.natu.natu.units as u
+import mathilda.natu.natu.math as m
 
 ANSWER_LINE = "\t\t\tAnswer = "
 ANSWER_PATTERN = "^\\s*Answer\\s*=\\s*.*$\n?"
@@ -25,8 +27,17 @@ EVAL_ON_PRESSING_ENTER_INSIDE_EXPRESSION = True
 # otherwise only stack variables are shown. 
 SHOW_ANONYMOUS_VALUES_IN_TABLE = True
 
-# Useful math functions
+# When set to 'True', any recognized units from the 'natu' module will be used. 
+# For example 'kg' will be replaced with the corresponding NATU unit. When set to 'False' all
+# words will be treated just like normal variables or functions
+USE_NATU = True
 
+# NATU
+
+NATU_UNIT_NAMES = [u for u in u._units]
+NATU_BASE_REGEX = "|".join(NATU_UNIT_NAMES)
+
+# Useful math functions
 
 def mean(numbers):
     return float(sum(numbers)) / max(len(numbers), 1)
@@ -458,6 +469,11 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         expr = re.sub(r'(\d+)\s*month(s)?', r'relativedelta(months = \1)', expr, flags=re.IGNORECASE)
         expr = re.sub(r'(\d+)\s*year(s)?', r'relativedelta(years = \1)', expr, flags=re.IGNORECASE)
 
+        # NATU
+        if USE_NATU:
+            rex = r"(?:\b)(" + NATU_BASE_REGEX + r")(?:\b)"
+            expr = re.sub(rex, r"u._units['\1']", expr) 
+
         # Current stack syntactic sugar
         expr = re.sub(r'@(\d+)', r'(__CURRENT_STACK[-\1] if len(__CURRENT_STACK) > \1 else 0)', expr)
         expr = re.sub('@@', '__CURRENT_STACK', expr)
@@ -488,6 +504,16 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             return expr
 
         answer = re.sub(', 0:00:00', '', txt)
+        
+        answer = re.sub("(" + NATU_BASE_REGEX + ")2", r"\1²", answer)
+        answer = re.sub("(" + NATU_BASE_REGEX + ")3", r"\1³", answer)
+        answer = re.sub("(" + NATU_BASE_REGEX + ")4", r"\1⁴", answer)
+        answer = re.sub("(" + NATU_BASE_REGEX + ")5", r"\1⁵", answer)
+        answer = re.sub("(" + NATU_BASE_REGEX + ")6", r"\1⁶", answer)
+        answer = re.sub("(" + NATU_BASE_REGEX + ")7", r"\1⁷", answer)
+        answer = re.sub("(" + NATU_BASE_REGEX + ")8", r"\1⁸", answer)
+        answer = re.sub("(" + NATU_BASE_REGEX + ")9", r"\1⁹", answer)
+        answer = re.sub(r"\*", '\u22c5', answer) # ⋅
 
         return answer
 
