@@ -1,0 +1,13 @@
+# Compiled files
+*.pyc
+build/
+
+# Generated files
+dist/
+MANIFEST
+doc/examples
+*.egg-info
+.fuse_hidden*
+
+# Backup files
+.ipynb_checkpoints
