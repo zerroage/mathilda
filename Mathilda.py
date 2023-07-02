@@ -148,17 +148,20 @@ class ContextHolder:
         self.clear()
 
     class ResultItem:
-        def __init__(self, var_name="", value="", remark="", fmt="", stack="", section="") -> None:
+        def __init__(self, var_name="", value="", pretty_value="", remark="", fmt="", stack="", section="") -> None:
 
             self.var_name = var_name.strip() if var_name else None
             self.value = value
+            self.pretty_value = pretty_value.strip()
             self.remark = remark.strip()
             self.fmt = fmt.strip()
             self.stack = stack.strip()
             self.section = section.strip()
 
         def formatted_value(self):
-            if self.fmt:
+            if self.pretty_value:
+                return self.pretty_value
+            elif self.fmt:
                 return self.fmt.format(self.value)
             else:
                 return self.value
@@ -204,13 +207,13 @@ class ContextHolder:
     def get_stack_vars(self, stack_name):
         return [v for v in self.history if v.stack == stack_name]
 
-    def store_result(self, var_name, value, remark="", fmt="", push_to_stack=True):
+    def store_result(self, var_name, value, pretty_value = "", remark="", fmt="", push_to_stack=True):
         # TODO: Don't put stacks on stack :-)
         # if not isinstance(value, list):
 
         stack_name = self.stacks[-1].name if len(self.stacks) > 0 else ""
         section_name = self.sections[-1].name if len(self.sections) > 0 else ""
-        result = self.ResultItem(var_name, value, remark, fmt, stack_name, section_name)
+        result = self.ResultItem(var_name, value, pretty_value, remark, fmt, stack_name, section_name)
 
         if var_name:
             self.vars_dict[var_name.strip()] = result
@@ -271,6 +274,8 @@ class MathildaBaseCommand(sublime_plugin.TextCommand):
 
 
 class RecalculateWorksheetCommand(MathildaBaseCommand):
+    
+    PRETTIFY_NATU_RESULT = True
 
     def update_view_name(self, edit):
 
@@ -358,9 +363,9 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 else:
                     # Evaulate expression
                     (var_name, answer) = self.evaluate(expression)
-                    pretty_answer = self.prettify(var_name, expression, answer)
+                    pretty_answer = self.prettify(var_name, expression, answer, fmt)
 
-                    self.context().store_result(var_name, answer, remark, fmt, push_to_stack)
+                    self.context().store_result(var_name, answer, pretty_answer, remark, fmt, push_to_stack)
                     chars_inserted = self.print_answer(self.view, edit, line, pretty_answer)
 
             except Exception as ex:
@@ -498,23 +503,28 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         else:
             return None, expr.strip()
 
-    def prettify(self, var_name, expr, answer):
+    def prettify(self, var_name, expr, answer, fmt=""):
         txt = str(answer) if answer is not None else ""
+        
         if "<function <lambda" in txt:
             return expr
 
         answer = re.sub(', 0:00:00', '', txt)
         
-        answer = re.sub("(" + NATU_BASE_REGEX + ")2", r"\1²", answer)
-        answer = re.sub("(" + NATU_BASE_REGEX + ")3", r"\1³", answer)
-        answer = re.sub("(" + NATU_BASE_REGEX + ")4", r"\1⁴", answer)
-        answer = re.sub("(" + NATU_BASE_REGEX + ")5", r"\1⁵", answer)
-        answer = re.sub("(" + NATU_BASE_REGEX + ")6", r"\1⁶", answer)
-        answer = re.sub("(" + NATU_BASE_REGEX + ")7", r"\1⁷", answer)
-        answer = re.sub("(" + NATU_BASE_REGEX + ")8", r"\1⁸", answer)
-        answer = re.sub("(" + NATU_BASE_REGEX + ")9", r"\1⁹", answer)
-        answer = re.sub(r"\*", '\u22c5', answer) # ⋅
+        if self.PRETTIFY_NATU_RESULT:
+            answer = re.sub("(" + NATU_BASE_REGEX + ")2", r"\1²", answer)
+            answer = re.sub("(" + NATU_BASE_REGEX + ")3", r"\1³", answer)
+            answer = re.sub("(" + NATU_BASE_REGEX + ")4", r"\1⁴", answer)
+            answer = re.sub("(" + NATU_BASE_REGEX + ")5", r"\1⁵", answer)
+            answer = re.sub("(" + NATU_BASE_REGEX + ")6", r"\1⁶", answer)
+            answer = re.sub("(" + NATU_BASE_REGEX + ")7", r"\1⁷", answer)
+            answer = re.sub("(" + NATU_BASE_REGEX + ")8", r"\1⁸", answer)
+            answer = re.sub("(" + NATU_BASE_REGEX + ")9", r"\1⁹", answer)
+            answer = re.sub(r"\*", '\u22c5', answer) # ⋅
 
+        if fmt:
+           answer = fmt.format(answer)
+        
         return answer
 
     def generate_table(self, view, edit, line, expr):
