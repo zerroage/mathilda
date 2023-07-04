@@ -18,20 +18,6 @@ ANSWER_LINE = "\t\t\tAnswer = "
 ANSWER_PATTERN = "^\\s*Answer\\s*=\\s*.*$\n?"
 CR_LF = "\n"
 
-# 'Enter' key behaviour when pressed inside an expression (non only in the end of a line):
-# False just inserts a new line
-# True behaves like if 'Enter' key was pressed in the end of line: evaluate line and print answer
-EVAL_ON_PRESSING_ENTER_INSIDE_EXPRESSION = True
-
-# When set to 'True', anonymous values (without named variables) from stacks are shown in a table,
-# otherwise only stack variables are shown. 
-SHOW_ANONYMOUS_VALUES_IN_TABLE = True
-
-# When set to 'True', any recognized units from the 'natu' module will be used. 
-# For example 'kg' will be replaced with the corresponding NATU unit. When set to 'False' all
-# words will be treated just like normal variables or functions
-USE_NATU = True
-
 # NATU
 
 NATU_UNIT_NAMES = [u for u in u._units]
@@ -274,7 +260,23 @@ class MathildaBaseCommand(sublime_plugin.TextCommand):
 
 
 class RecalculateWorksheetCommand(MathildaBaseCommand):
-    
+
+    # 'Enter' key behaviour when pressed inside an expression (non only in the end of a line):
+    # False just inserts a new line
+    # True behaves like if 'Enter' key was pressed in the end of line: evaluate line and print answer
+    EVAL_ON_PRESSING_ENTER_INSIDE_EXPRESSION = True
+
+    # When set to 'True', anonymous values (without named variables) from stacks are shown in a table,
+    # otherwise only stack variables are shown. 
+    SHOW_ANONYMOUS_VALUES_IN_TABLE = True
+
+    # When set to 'True', any recognized units from the 'natu' module will be used. 
+    # For example 'kg' will be replaced with the corresponding NATU unit. When set to 'False' all
+    # words will be treated just like normal variables or functions
+    USE_NATU = True
+
+    # When set to 'True', the NATU units are prettified: powers are shown with Unicode symbols, 
+    # multiplication sign is changed to the Unicode multiplication dot.
     PRETTIFY_NATU_RESULT = True
 
     def update_view_name(self, edit):
@@ -393,7 +395,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         # Depending on the configuration we either insert a new line, or move the carret to the end of line
         
         for (i,s) in enumerate(self.view.sel()):
-            if EVAL_ON_PRESSING_ENTER_INSIDE_EXPRESSION:
+            if self.EVAL_ON_PRESSING_ENTER_INSIDE_EXPRESSION:
                 line = self.view.line(s)
                 del self.view.sel()[i]
                 self.view.sel().add(line.end())
@@ -475,7 +477,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         expr = re.sub(r'(\d+)\s*year(s)?', r'relativedelta(years = \1)', expr, flags=re.IGNORECASE)
 
         # NATU
-        if USE_NATU:
+        if self.USE_NATU:
             rex = r"(?:\b)(" + NATU_BASE_REGEX + r")(?:\b)"
             expr = re.sub(rex, r"u._units['\1']", expr) 
 
@@ -543,7 +545,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 stack_vars = self.context().get_stack_vars(var_name)
                 tf.start_row_group(var_name)
                 for v in stack_vars:
-                    if v.var_name or SHOW_ANONYMOUS_VALUES_IN_TABLE:
+                    if v.var_name or self.SHOW_ANONYMOUS_VALUES_IN_TABLE:
                         tf.add_row([v.var_name if v.var_name else "", v.formatted_value(), v.remark])
                 tf.start_row_group()    
 
