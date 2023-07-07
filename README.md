@@ -298,6 +298,64 @@ total = sum(supermarket) + sum(diy)
 |------------------------------|
 ```
 
+### Natural units support
+
+Mathilda comes with the natural units support provided by the 'NATU' library (see https://github.com/kdavies4/natu).
+
+Example:
+```
+; Simplifying units
+1*kg*m**2/s**2
+			Answer = 1 J
+
+; Custom units
+cinch = inch**3
+			Answer = ScalarUnit inch3 with dimension L3 (not prefixable)
+10*cinch
+			Answer = 10 inch3
+
+; Conversion factor
+inch/m
+			Answer = 0.025400000000000002
+```
+
+### Configuration directives
+
+#### Turn natural units support on/off
+
+The 'NATU' library comes with a lot of units. If you don't need natural units support (for example, because unit names interfere with your variable names), one can turn it off:
+
+```
+!SET NATU:ON
+
+kg = 1
+			Answer = 1
+kg
+			Answer = ScalarUnit kg with dimension M (not prefixable)
+
+!SET NATU:OFF
+
+kg
+			Answer = 1
+```
+
+#### Prettify natural unit output
+
+This is an experimental feature. When turned on, results returned by the 'natu' library are prettified:
+
+```
+!SET NATU-PRETTY:ON
+
+1*kg*m*m*s
+			Answer = 1 kg⋅m²⋅s
+
+!SET NATU-PRETTY:OFF
+
+1*kg*m*m*s
+			Answer = 1 kg*m2*s
+
+```
+
 ## Useful shortcuts
 
 * Press `F5` to recalculate entire worksheet (also happens on pressing the `Enter` key);
