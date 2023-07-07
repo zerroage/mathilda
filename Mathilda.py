@@ -357,6 +357,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             if expression.startswith('|'):
                 continue
 
+            if expression.startswith('!SET '):
+                self.set_parameter(expression.lstrip('!SET '))
+                continue
+
             chars_inserted = 0
             try:
                 if expression.startswith('!'):
@@ -529,6 +533,18 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         
         return answer
 
+    def set_parameter(self, expr):
+        kv = re.split('[\=\:]', expr)
+        if len(kv) > 1:
+            param = kv[0].strip().upper()
+            value = kv[1].strip().upper()
+            bool_value = True if value == 'YES' or value == 'TRUE' or value == 'ON' else False
+            
+            if param == 'NATU':
+                self.USE_NATU = bool_value
+            elif param == 'NATU-PRETTY':
+                self.PRETTIFY_NATU_RESULT = bool_value
+        
     def generate_table(self, view, edit, line, expr):
         if not expr:
             return 0
