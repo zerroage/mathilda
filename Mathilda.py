@@ -11,8 +11,8 @@ from time import gmtime, strftime
 import sublime
 import sublime_plugin
 from dateutil.relativedelta import relativedelta
-import mathilda.natu.natu.units as u
-import mathilda.natu.natu.math as m
+from .natu.natu import units as u
+from .natu.natu import math as m
 
 ANSWER_LINE = "\t\t\tAnswer = "
 ANSWER_PATTERN = "^\\s*Answer\\s*=\\s*.*$\n?"
