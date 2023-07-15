@@ -515,24 +515,24 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         if "<function <lambda" in txt:
             return expr
 
-        answer = re.sub(', 0:00:00', '', txt)
-        answer = re.sub(r'(\d\d:\d\d:\d\d)\.\d+$', r'\1', answer)
+        txt = re.sub(', 0:00:00', '', txt)
+        txt = re.sub(r'(\d\d:\d\d:\d\d)\.\d+$', r'\1', txt)
         
         if self.PRETTIFY_NATU_RESULT:
-            answer = re.sub("(" + NATU_BASE_REGEX + ")2", r"\1²", answer)
-            answer = re.sub("(" + NATU_BASE_REGEX + ")3", r"\1³", answer)
-            answer = re.sub("(" + NATU_BASE_REGEX + ")4", r"\1⁴", answer)
-            answer = re.sub("(" + NATU_BASE_REGEX + ")5", r"\1⁵", answer)
-            answer = re.sub("(" + NATU_BASE_REGEX + ")6", r"\1⁶", answer)
-            answer = re.sub("(" + NATU_BASE_REGEX + ")7", r"\1⁷", answer)
-            answer = re.sub("(" + NATU_BASE_REGEX + ")8", r"\1⁸", answer)
-            answer = re.sub("(" + NATU_BASE_REGEX + ")9", r"\1⁹", answer)
-            answer = re.sub(r"\*", '\u22c5', answer) # ⋅
+            txt = re.sub("(" + NATU_BASE_REGEX + ")2", r"\1²", txt)
+            txt = re.sub("(" + NATU_BASE_REGEX + ")3", r"\1³", txt)
+            txt = re.sub("(" + NATU_BASE_REGEX + ")4", r"\1⁴", txt)
+            txt = re.sub("(" + NATU_BASE_REGEX + ")5", r"\1⁵", txt)
+            txt = re.sub("(" + NATU_BASE_REGEX + ")6", r"\1⁶", txt)
+            txt = re.sub("(" + NATU_BASE_REGEX + ")7", r"\1⁷", txt)
+            txt = re.sub("(" + NATU_BASE_REGEX + ")8", r"\1⁸", txt)
+            txt = re.sub("(" + NATU_BASE_REGEX + ")9", r"\1⁹", txt)
+            txt = re.sub(r"\*", '\u22c5', txt) # ⋅
 
         if fmt:
-           answer = fmt.format(answer)
+           txt = fmt.format(txt)
         
-        return answer
+        return txt
 
     def set_parameter(self, expr):
         kv = re.split('[\=\:]', expr)
