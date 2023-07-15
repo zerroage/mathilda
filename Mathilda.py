@@ -516,6 +516,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             return expr
 
         answer = re.sub(', 0:00:00', '', txt)
+        answer = re.sub(r'(\d\d:\d\d:\d\d)\.\d+$', r'\1', answer)
         
         if self.PRETTIFY_NATU_RESULT:
             answer = re.sub("(" + NATU_BASE_REGEX + ")2", r"\1²", answer)
