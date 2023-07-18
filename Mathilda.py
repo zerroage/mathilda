@@ -279,6 +279,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
     # multiplication sign is changed to the Unicode multiplication dot.
     PRETTIFY_NATU_RESULT = True
 
+    # When set to t'True', exponential (e-10) results are formatted in the nice form using Unicode characters
+    # for power notation, e.g. '1e5' is shown as '1⋅10⁵'. When set to 'False', the exponent notation is printed as is
+    PRETTIFY_EXPONENT = True
+    
     def update_view_name(self, edit):
 
         # take first line if it is a comment
@@ -510,29 +514,40 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             return None, expr.strip()
 
     def prettify(self, var_name, expr, answer, fmt=""):
-        txt = str(answer) if answer is not None else ""
+        from .natu.natu import core as core
+        from .natu.natu import util as util
+        
+        txt = ""
+        unit_txt = ""
+        
+        if isinstance(answer, core.Quantity):
+            display_unit = core.display_unit(answer)
+            unit = core.unitspace(**display_unit)
+            value = answer / unit
+            txt = str(value)
+            # dim = core.dimension(answer)
+            unit_txt = str(unit)
+
+            if self.PRETTIFY_NATU_RESULT:
+                unit_txt = format(unit, 'U').replace(' ', '⋅')
+            
+        elif answer is not None:
+            if fmt:
+                txt = fmt.format(answer)
+            else:    
+                txt = str(answer)
+        
+        if self.PRETTIFY_EXPONENT:
+            txt = util.format_e(txt, 'U').replace('✕', '⋅')
         
         if "<function <lambda" in txt:
             return expr
 
+        # Fix datetime display
         txt = re.sub(', 0:00:00', '', txt)
         txt = re.sub(r'(\d\d:\d\d:\d\d)\.\d+$', r'\1', txt)
         
-        if self.PRETTIFY_NATU_RESULT:
-            txt = re.sub("(" + NATU_BASE_REGEX + ")2", r"\1²", txt)
-            txt = re.sub("(" + NATU_BASE_REGEX + ")3", r"\1³", txt)
-            txt = re.sub("(" + NATU_BASE_REGEX + ")4", r"\1⁴", txt)
-            txt = re.sub("(" + NATU_BASE_REGEX + ")5", r"\1⁵", txt)
-            txt = re.sub("(" + NATU_BASE_REGEX + ")6", r"\1⁶", txt)
-            txt = re.sub("(" + NATU_BASE_REGEX + ")7", r"\1⁷", txt)
-            txt = re.sub("(" + NATU_BASE_REGEX + ")8", r"\1⁸", txt)
-            txt = re.sub("(" + NATU_BASE_REGEX + ")9", r"\1⁹", txt)
-            txt = re.sub(r"\*", '\u22c5', txt) # ⋅
-
-        if fmt:
-           txt = fmt.format(txt)
-        
-        return txt
+        return txt + " " + unit_txt
 
     def set_parameter(self, expr):
         kv = re.split('[\=\:]', expr)
@@ -545,6 +560,8 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 self.USE_NATU = bool_value
             elif param == 'NATU-PRETTY':
                 self.PRETTIFY_NATU_RESULT = bool_value
+            elif param == 'PRETTY-EXP':
+                self.PRETTIFY_EXPONENT = bool_value
         
     def generate_table(self, view, edit, line, expr):
         if not expr:

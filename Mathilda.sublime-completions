@@ -3,6 +3,7 @@
  "completions": [
   {"trigger": "!SET NATU:\tUse NATU (natural units) library (ON|OFF)", "contents": "!SET NATU:${1:ON}"},
   {"trigger": "!SET NATU-PRETTY:\tPrettify NATU results (ON|OFF)", "contents": "!SET NATU-PRETTY:${1:ON}"},
+  {"trigger": "!SET PRETTY-EXP:\tPrettify exponents (ON|OFF)", "contents": "!SET PRETTY-EXP:${1:ON}"},
   {"trigger": "abs\tReturn the absolute value of x", "contents": "abs(${1:x})"},
   {"trigger": "acos\tReturn the arc cosine of x, in radians", "contents": "acos(${1:x})"},
   {"trigger": "acosh\tReturn the inverse hyperbolic cosine of x", "contents": "acosh(${1:x})"},
