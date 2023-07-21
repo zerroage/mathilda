@@ -524,7 +524,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             display_unit = core.display_unit(answer)
             unit = core.unitspace(**display_unit)
             value = answer / unit
-            txt = str(value)
+            if fmt:
+                txt = fmt.format(value)
+            else:    
+                txt = str(value)
             # dim = core.dimension(answer)
             unit_txt = str(unit)
 
