@@ -2,6 +2,8 @@ import itertools
 import random
 import re
 import string
+import inspect
+import traceback
 from collections import OrderedDict
 from datetime import date, datetime, timedelta
 from fractions import Fraction
@@ -82,19 +84,31 @@ class TableFormatter:
         self.headers = headers
         self.current_row_group = ""
         self.row_groups = OrderedDict()
+        self.subtotal_groups = OrderedDict()
+        self.totals = []
         self.start_row_group()
 
     def add_row(self, row):
         self.row_groups[self.current_row_group].append(row)
+
+    def add_subtotal(self, total):
+        self.subtotal_groups[self.current_row_group].append(total)
+        
+    def add_total(self, total):
+        self.totals.append(total)
         
     def start_row_group(self, group_name = ""):
         self.current_row_group = group_name
         if not group_name in self.row_groups:
             self.row_groups[group_name] = []
+            self.subtotal_groups[group_name] = []
 
     def format_table(self):
         # Flatten list of lists (returned by dict.values() method)
-        all_rows = [self.headers] + list(itertools.chain(*self.row_groups.values())) 
+        all_rows = [self.headers] + \
+            list(itertools.chain(*self.row_groups.values())) + \
+            list(itertools.chain(*self.subtotal_groups.values())) + \
+            self.totals
         
         columns = max([len(r) for r in all_rows])
         column_widths = [max([len(str(r[c])) for r in all_rows if len(r) > c]) for c in range(columns)]
@@ -102,7 +116,7 @@ class TableFormatter:
         top_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|\n"
         divider = "|-" + "-|-".join(['-' * w for w in column_widths]) + "-|\n"
         row_fmt = "| " + " | ".join(['{:%s}' % w for w in column_widths]) + " |\n"
-        sub_fmt = "| " + "{:%s}" % (sum(column_widths) + 2 * columns) + " |\n" # plus two extra spaces per colulmn
+        sub_fmt = "| " + "{:%s}" % (sum(column_widths) + 3 * (columns - 1)) + " |\n" # two spaces and col.separator between colulmns
         mid_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|\n"   # Ending new line will be inserted separately
         bot_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|"   # Ending new line will be inserted separately
 
@@ -116,6 +130,14 @@ class TableFormatter:
                     r += [self.format_row(sub_fmt, [k], 1)]
                     r += [mid_div]
                 r += [self.format_row(row_fmt, r, columns) for r in v]
+                if len(self.subtotal_groups[k]) > 0:
+                    r += [mid_div]
+                    r += [self.format_row(row_fmt, r, columns) for r in self.subtotal_groups[k]]
+
+        if len(self.totals) > 0:
+            r += [mid_div]
+            r += [self.format_row(row_fmt, r, columns) for r in self.totals]
+            
 
         # Reminder for myself: '*' unpacks a list to function arguments
         return "".join([top_div] + 
@@ -333,7 +355,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
             # Process remarks
             expression_with_remark = re.split("[;#']", expression, 1)
-            if len(expression_with_remark) > 1:
+            if len(expression_with_remark) > 1 and not expression.startswith('!'):
                 expression = expression_with_remark[0].strip()
                 remark = expression_with_remark[1].strip()
 
@@ -379,6 +401,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                     chars_inserted = self.print_answer(self.view, edit, line, pretty_answer)
 
             except Exception as ex:
+                traceback.print_exc() 
                 error_regions += [line]
                 error_annotations += [str(ex)]
             finally:
@@ -535,7 +558,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 unit_txt = format(unit, 'U').replace(' ', '⋅')
             
         elif answer is not None:
-            if fmt:
+            if fmt and not callable(answer):
                 txt = fmt.format(answer)
             else:    
                 txt = str(answer)
@@ -567,24 +590,94 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 self.PRETTIFY_EXPONENT = bool_value
         
     def generate_table(self, view, edit, line, expr):
+        
+        def invoke_table_fun(fn, args):
+            fn_args = args[:fn['numargs']]
+            return fn['func'].__call__(*fn_args) # TODO prettify and format
+
         if not expr:
             return 0
 
-        tf = TableFormatter(["Var", "Value", "Remark"])
-
         vars_list = re.split('[,;]', expr)
+        
+        # Determine "column", "sub-total" and "total" functions
+        # column:fn:"Header"
+        # column|col|c
+        # subtotal|sub|s
+        # total|t
+        extra_col_funcs = []
+        sub_total_funcs = []
+        total_funcs = []
+        for var_name in vars_list:
+            var_parts = re.split(':', var_name.strip())
+            if len(var_parts) > 1:
+                func_type = var_parts[0].strip()
+                func_name = var_parts[1].strip()
+                func_title = func_name
+                if len(var_parts) > 2:
+                    func_title = var_parts[2].strip('"\'')
+                
+                func = self.context().get_vars()[func_name].value if func_name in self.context().get_vars() \
+                       else (globals().get(func_name))
+                
+                if callable(func):
+                    numargs = 1 if inspect.isbuiltin(func) else len(inspect.getfullargspec(func).args)
+                    
+                    func_desc = {"type": func_type, "name": func_name, "title": func_title, "func": func, "numargs": numargs}
+                    if func_type == "c" or func_type == "col" or func_type == "column":
+                        extra_col_funcs += [func_desc]
+                    elif func_type == "s" or func_type == "sub" or func_type == "subtotal":
+                        sub_total_funcs += [func_desc]
+                    elif func_type == "t" or func_type == "total":
+                        total_funcs += [func_desc]
+
+        # Collect all table values to be passed to aggregate functions
+        all_table_data = []
+        non_stack_table_data = []
+        for var_name in vars_list:
+            var_name = var_name.strip()
+            if var_name in self.context().get_vars():
+                all_table_data += [self.context().get_vars()[var_name].value]
+                non_stack_table_data += [self.context().get_vars()[var_name].value]
+            elif self.context().has_stack(var_name):
+                stack_vars = self.context().get_stack_vars(var_name)
+                for v in stack_vars:
+                    if v.var_name or self.SHOW_ANONYMOUS_VALUES_IN_TABLE:
+                        all_table_data += [v.value]
+        
+        tf = TableFormatter(["Var", "Value"] + [col["title"] for col in extra_col_funcs] + ["Remark"])
+       
         for var_name in vars_list:
             var_name = var_name.strip()
             if var_name in self.context().get_vars():
                 v = self.context().get_vars()[var_name]
-                tf.add_row([v.var_name, v.formatted_value(), v.remark])
+                # TODO check if var is tuple or list: if type(x) is list:
+                args = [v.value, non_stack_table_data, all_table_data]
+                extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
+                tf.add_row([v.var_name, v.formatted_value()] + extra_cols + [v.remark])
             elif self.context().has_stack(var_name):
                 stack_vars = self.context().get_stack_vars(var_name)
+                stack_data = []
+                for v in stack_vars:
+                    stack_data += [v.value]
+                    
                 tf.start_row_group(var_name)
                 for v in stack_vars:
                     if v.var_name or self.SHOW_ANONYMOUS_VALUES_IN_TABLE:
-                        tf.add_row([v.var_name if v.var_name else "", v.formatted_value(), v.remark])
-                tf.start_row_group()    
+                        args = [v.value, stack_data, all_table_data]
+                        extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
+                        tf.add_row([v.var_name if v.var_name else "", v.formatted_value()] + extra_cols + [v.remark])
+                
+                for fn in sub_total_funcs:
+                    tf.add_subtotal([fn['title'], invoke_table_fun(fn, [stack_data, all_table_data])])
+                tf.start_row_group()   
+
+        for fn in sub_total_funcs:
+            tf.add_subtotal([fn['title'], invoke_table_fun(fn, [non_stack_table_data, all_table_data])])
+
+        for fn in total_funcs:
+            tf.add_total([fn['title'], invoke_table_fun(fn, [all_table_data])])
+
 
         pos = line.end()
         # Erase the old table if it exists
