@@ -17,7 +17,8 @@ from .natu.natu import units as u
 from .natu.natu import math as m
 
 ANSWER_LINE = "\t\t\tAnswer = "
-ANSWER_PATTERN = "^\\s*Answer\\s*=\\s*.*$\n?"
+FUNCTION_LINE = "\t\t\tFunction: "
+ANSWER_PATTERN = "^\\s*(?:Answer\\s*=|Function:)\\s*.*$\n?"
 CR_LF = "\n"
 
 # NATU
@@ -398,7 +399,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                     pretty_answer = self.prettify(var_name, expression, answer, fmt)
 
                     self.context().store_result(var_name, answer, pretty_answer, remark, fmt, push_to_stack)
-                    chars_inserted = self.print_answer(self.view, edit, line, pretty_answer)
+                    chars_inserted = self.print_answer(self.view, edit, line, answer, pretty_answer)
 
             except Exception as ex:
                 traceback.print_exc() 
@@ -449,7 +450,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         result = eval(expr, globals(), self.context().get_evaluation_context())
         return (var_name, result)
 
-    def print_answer(self, view, edit, line, answer):
+    def print_answer(self, view, edit, line, answer, pretty_answer):
         if not answer:
             return 0
         prev_answer_pos = line.end() + 1  # Take into account the new line character
@@ -457,7 +458,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         # Erase previous answer if it exists
         if prev_answer_line is not None and 0 < prev_answer_line.begin() <= prev_answer_pos:
             view.erase(edit, prev_answer_line)
-        answer_text = CR_LF + ANSWER_LINE + str(answer)
+        answer_text = CR_LF + (FUNCTION_LINE if callable(answer) else ANSWER_LINE) + str(pretty_answer)
         return view.insert(edit, line.end(), answer_text)
 
     def desugar_expression(self, expr):

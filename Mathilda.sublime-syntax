@@ -9,7 +9,7 @@ scope: source.mathilda
 contexts:
   main:
     # Answer lines contain the word 'Answer' followed by = or : symbol
-    - match: ^\s*Ans(wer)?\s*[=:].*$
+    - match: ^\s*(?:Ans(wer)?|Func(tion)?)\s*[=:].*$
       scope: comment
 
     # Comments begin with a ';' or '#' and finish at the end of the line
