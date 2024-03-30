@@ -8,7 +8,7 @@ file_extensions:
 scope: source.mathilda
 contexts:
   main:
-    # Answer lines contain the word 'Answer' followed by = or : symbol
+    # Answer lines contain the word 'Answer' or 'Function' followed by = or : symbol
     - match: ^\s*(?:Ans(wer)?|Func(tion)?)\s*[=:].*$
       scope: comment
 
@@ -24,7 +24,7 @@ contexts:
     - match: '#.*$'
       scope: comment
 
-    # Answer lines contain the word 'Answer' followed by = or : symbol
+    # Function definition
     - match: '=|:='
       scope: punctuation.definition
 
@@ -58,13 +58,15 @@ contexts:
     - match: "^\\|[\\-\\|]+\\|$"
       scope: markup.raw.block
 
-    - match: "^\\|(.*)\\|(.*)\\|(.*)\\|$"
+    - match: "^\\|(.*?)\\|(.*)\\|(.*)\\|$"
       scope: markup.raw.block 
       captures:
         1: markup.raw.block string 
         2: markup.raw.block constant.numeric
         3: markup.raw.block comment
 
-    - match: "^\\|.*\\|$"
+    - match: "^\\|(.*)\\|$"
       scope: markup.raw.block 
+      captures:
+        1: markup.heading
    
