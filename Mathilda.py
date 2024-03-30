@@ -213,6 +213,9 @@ class ContextHolder:
     def has_stack(self, stack_name):
         return stack_name in [s.name for s in self.stacks]
     
+    def get_stack(self, stack_name):
+        return next(s for s in self.stacks if s.name == stack_name)
+    
     def get_stack_vars(self, stack_name):
         return [v for v in self.history if v.stack == stack_name]
 
@@ -292,7 +295,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
     # When set to 'True', anonymous values (without named variables) from stacks are shown in a table,
     # otherwise only stack variables are shown. 
-    SHOW_ANONYMOUS_VALUES_IN_TABLE = True
+    SHOW_UNASSIGNED_VALUES_IN_TABLE = True
 
     # When set to 'True', any recognized units from the 'natu' module will be used. 
     # For example 'kg' will be replaced with the corresponding NATU unit. When set to 'False' all
@@ -386,7 +389,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 continue
 
             if expression.startswith('!SET '):
-                self.set_parameter(expression.lstrip('!SET '))
+                self.set_parameter(expression.lstrip('!SET'))
                 continue
 
             chars_inserted = 0
@@ -590,6 +593,8 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 self.PRETTIFY_NATU_RESULT = bool_value
             elif param == 'PRETTY-EXP':
                 self.PRETTIFY_EXPONENT = bool_value
+            elif param == 'SHOW-UNASSIGNED-VALUES-IN-TABLE':
+                self.SHOW_UNASSIGNED_VALUES_IN_TABLE = bool_value
         
     def generate_table(self, view, edit, line, expr):
         
@@ -639,11 +644,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             elif self.context().has_stack(var_name):
                 stack_vars = self.context().get_stack_vars(var_name)
                 for v in stack_vars:
-                    if v.var_name or self.SHOW_ANONYMOUS_VALUES_IN_TABLE:
+                    if v.var_name or self.SHOW_UNASSIGNED_VALUES_IN_TABLE:
                         all_table_data += [v.value]
         
         tf = TableFormatter(["Var", "Value"] + [col["title"] for col in extra_col_funcs] + ["Remark"])
-       
         for var_name in vars_list:
             var_name = var_name.strip()
             if var_name in self.context().get_vars():
@@ -653,14 +657,14 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
                 tf.add_row([v.var_name, v.formatted_value()] + extra_cols + [v.remark])
             elif self.context().has_stack(var_name):
-                stack_vars = self.context().get_stack_vars(var_name)
-                stack_data = []
-                for v in stack_vars:
-                    stack_data += [v.value]
+                stack = self.context().get_stack(var_name)
+                stack_vars = stack.items
+                stack_data = [v.value for v in stack_vars if v.var_name or self.SHOW_UNASSIGNED_VALUES_IN_TABLE]
+                
                     
-                tf.start_row_group(var_name)
+                tf.start_row_group(stack.remark if stack.remark else var_name)
                 for v in stack_vars:
-                    if v.var_name or self.SHOW_ANONYMOUS_VALUES_IN_TABLE:
+                    if v.var_name or self.SHOW_UNASSIGNED_VALUES_IN_TABLE:
                         args = [v.value, stack_data, all_table_data]
                         extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
                         tf.add_row([v.var_name if v.var_name else "", v.formatted_value()] + extra_cols + [v.remark])
