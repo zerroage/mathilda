@@ -227,15 +227,16 @@ class ContextHolder:
         if var_name:
             self.vars_dict[var_name.strip()] = result
 
-        # Save calculation history in execution order
-        if push_to_stack:
-            self.history.append(result)
+        if not callable(result.value):
+            # Save calculation history in execution order
+            if push_to_stack:
+                self.history.append(result)
 
-        # Add to the currently active stack and section
-        if len(self.stacks) > 0 and push_to_stack:
-            self.stacks[-1].items.append(result)
-        if len(self.sections) > 0 and push_to_stack:
-            self.sections[-1].items.append(result)
+            # Add to the currently active stack and section
+            if len(self.stacks) > 0 and push_to_stack:
+                self.stacks[-1].items.append(result)
+            if len(self.sections) > 0 and push_to_stack:
+                self.sections[-1].items.append(result)
 
     def start_new_stack(self, stack_name, remark):
         self.stacks.append(self.ResultsHolder(stack_name, remark))
@@ -601,11 +602,6 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
         vars_list = re.split('[,;]', expr)
         
-        # Determine "column", "sub-total" and "total" functions
-        # column:fn:"Header"
-        # column|col|c
-        # subtotal|sub|s
-        # total|t
         extra_col_funcs = []
         sub_total_funcs = []
         total_funcs = []
