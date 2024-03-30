@@ -510,7 +510,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         expr = re.sub(r'(\d+)\s*year(s)?', r'relativedelta(years = \1)', expr, flags=re.IGNORECASE)
 
         # NATU
-        if self.USE_NATU:
+        if self.USE_NATU and not expr.startswith("lambda "):
             rex = r"(?:\b)(" + NATU_BASE_REGEX + r")(?:\b)"
             expr = re.sub(rex, r"u._units['\1']", expr) 
 
