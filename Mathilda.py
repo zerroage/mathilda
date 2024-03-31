@@ -600,7 +600,8 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         
         def invoke_table_fun(fn, args):
             fn_args = args[:fn['numargs']]
-            return fn['func'].__call__(*fn_args) # TODO prettify and format
+            result = fn['func'].__call__(*fn_args)
+            return self.prettify("", "", result)
 
         if not expr:
             return 0
