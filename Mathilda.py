@@ -640,8 +640,12 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         for var_name in vars_list:
             var_name = var_name.strip()
             if var_name in self.context().get_vars():
-                all_table_data += [self.context().get_vars()[var_name].value]
-                non_stack_table_data += [self.context().get_vars()[var_name].value]
+                v = self.context().get_vars()[var_name]
+                if type(v.value) == list:
+                    all_table_data += [(w[1] if type(w) == tuple else w) for w in v.value]
+                else:
+                    all_table_data += [v.value]
+                    non_stack_table_data += [v.value]
             elif self.context().has_stack(var_name):
                 stack_vars = self.context().get_stack_vars(var_name)
                 for v in stack_vars:
@@ -653,10 +657,29 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             var_name = var_name.strip()
             if var_name in self.context().get_vars():
                 v = self.context().get_vars()[var_name]
-                # TODO check if var is tuple or list: if type(x) is list:
-                args = [v.value, non_stack_table_data, all_table_data]
-                extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
-                tf.add_row([v.var_name, v.formatted_value()] + extra_cols + [v.remark])
+                # Add subsection for lists
+                if type(v.value) == list:
+                    tf.start_row_group(v.remark if v.remark else var_name)
+                    vals = []
+                    for w in v.value:
+                        if type(w) == tuple and len(w) >= 2:
+                            vals += [w[1]]                        
+                            args = [w[1], [t[1] for t in v.value], all_table_data]
+                            extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
+                            tf.add_row([self.prettify("", "", w[0]), self.prettify("", "", w[1])] + extra_cols + ([self.prettify("", "", w[2])] if len(w) >= 3 else []))
+                        else:
+                            vals += [w]
+                            args = [w, v.value, all_table_data]
+                            extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
+                            tf.add_row(["", self.prettify("", "", w)] + extra_cols)
+                    for fn in sub_total_funcs:
+                        tf.add_subtotal([fn['title'], invoke_table_fun(fn, [vals, all_table_data])])
+                    tf.start_row_group()
+                                                
+                else:    
+                    args = [v.value, non_stack_table_data, all_table_data]
+                    extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
+                    tf.add_row([v.var_name, v.formatted_value()] + extra_cols + [v.remark])
             elif self.context().has_stack(var_name):
                 stack = self.context().get_stack(var_name)
                 stack_vars = stack.items
