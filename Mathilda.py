@@ -191,7 +191,7 @@ class ContextHolder:
         self.sections = []
 
     def get_evaluation_context(self):
-        context = {}
+        context = globals()
 
         vars_dict = {k: v.value for (k, v) in self.vars_dict.items()}
         stacks_dict = {s.name: s.get_item_values_list() for s in self.stacks}
@@ -204,7 +204,6 @@ class ContextHolder:
         context['ans'] = ans
         context['Ans'] = ans
         context['ANS'] = ans
-
         return context
 
     def get_vars(self):
@@ -451,7 +450,8 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
     def evaluate(self, expr):        
         (var_name, expr) = self.parse_var_or_function_declaration(expr)
         expr = self.desugar_expression(expr)
-        result = eval(expr, globals(), self.context().get_evaluation_context())
+        context = self.context().get_evaluation_context()
+        result = eval(expr, context, context)
         return (var_name, result)
 
     def print_answer(self, view, edit, line, answer, pretty_answer):
