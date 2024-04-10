@@ -364,10 +364,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 remark = expression_with_remark[1].strip()
 
                 # Process formatting rules
-                m = re.search(r"\{\S*\}", remark)
-                if m:
-                    fmt = m.group(0)
-                    remark = remark[:m.start(0)] + remark[m.end(0):]
+                remark, fmt = self.get_formatting(remark)
 
             # Process stacks
             if expression.startswith('@'):
@@ -424,6 +421,13 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
 
         self.update_vars(edit)
         self.view.set_status('worksheet', "Updated on " + strftime("%Y-%m-%d at %H:%M:%S", gmtime()))
+
+    def get_formatting(self, remark, fmt = ""):
+        m = re.search(r"\{\S*\}", remark)
+        if m:
+            fmt = m.group(0)
+            remark = remark[:m.start(0)] + remark[m.end(0):]
+        return remark.strip(), fmt.strip()
 
     def pre_move_carret(self, edit):
         # At this moment expressions are not evaluated yet
@@ -601,7 +605,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         def invoke_table_fun(fn, args):
             fn_args = args[:fn['numargs']]
             result = fn['func'].__call__(*fn_args)
-            return self.prettify("", "", result)
+            return self.prettify("", "", result, fn['fmt'])
 
         if not expr:
             return 0
@@ -612,21 +616,35 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         sub_total_funcs = []
         total_funcs = []
         for var_name in vars_list:
+            var_name = var_name.replace("{:", "{$") # mask formatting colon to avoid splitting the string in the wrong place
             var_parts = re.split(':', var_name.strip())
             if len(var_parts) > 1:
                 func_type = var_parts[0].strip()
                 func_name = var_parts[1].strip()
                 func_title = func_name
-                if len(var_parts) > 2:
-                    func_title = var_parts[2].strip('"\'')
+                fmt = ""
+                func = None
                 
-                func = self.context().get_vars()[func_name].value if func_name in self.context().get_vars() \
-                       else (globals().get(func_name))
+                if func_name in self.context().get_vars():                    
+                    f = self.context().get_vars()[func_name]
+                    func = f.value
+                    fmt = f.fmt
+                    func_title = f.remark
+                elif func_name in globals():
+                    func = globals().get(func_name)
+                    func_title = func_name
+
+                if len(var_parts) > 2:                    
+                    title = var_parts[2].strip('"\'')
+                    title = title.replace("{$", "{:") # unmask colon and extract formatting if any
+                    title, fmt = self.get_formatting(title, fmt)
+                    title = title
+                    func_title = title or func_title
                 
                 if callable(func):
                     numargs = 1 if inspect.isbuiltin(func) else len(inspect.getfullargspec(func).args)
                     
-                    func_desc = {"type": func_type, "name": func_name, "title": func_title, "func": func, "numargs": numargs}
+                    func_desc = {"type": func_type, "name": func_name, "title": func_title, "func": func, "fmt": fmt, "numargs": numargs}
                     if func_type == "c" or func_type == "col" or func_type == "column":
                         extra_col_funcs += [func_desc]
                     elif func_type == "s" or func_type == "sub" or func_type == "subtotal":
