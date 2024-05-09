@@ -78,6 +78,80 @@ def gibberish(wordcount):
     # you could trow in number combinations, maybe capitalized versions...
     return ' '.join(random.sample(list(syllables), wordcount))
 
+# Generates a bar chart in a table
+#
+# value:        value in a table row
+# group_values: list of values in the tables' group (a stack, or a list)
+# all_values:   list of all values in the table
+# size:         table colulmn size, limits max bar size
+# base_value:   base value for percent calculation, by default percentage is calculated from the maximum absolute value of all rows
+# mid_value:    middle line value to generate two-directional bar chart
+# mid_char:     symbol to draw the middle line
+# left_char:    symbol to draw the left part of the bar chart with values less than mid_value
+# right_char:   symbol to draw the right part of the bar chart with values greater than mid_value
+# left_tip:     symbol to draw the tip of the left-side bar
+# right_tip:    symbol to draw the tip of the right-side bar
+# left_fmt:     Python format string to display value or percentage next to the left-side bar
+# right_fmt:    Python format string to display value or percentage next to the right-side bar
+def bar(value = 0, group_values = [], all_values=[], 
+        size = 32, base_value = float('nan'), mid_value = 0, 
+        mid_char = "|", left_char="■", right_char="■", left_tip="", right_tip="",
+        left_fmt="{percent:.2%} ", right_fmt=" {percent:.2%}"):
+
+    if isnan(base_value):
+        base_value = max([abs(v) for v in group_values])
+
+    if base_value == 0:
+        return ""
+    
+    left_char = " " if left_char == "" else left_char[0]
+    right_char = " " if right_char == "" else right_char[0]
+
+    min_value = min(group_values)
+    max_value = max(group_values)
+    if min_value < mid_value < max_value: 
+        max_value_range = (max_value - mid_value) + (mid_value - min_value)
+    elif min_value < max_value < mid_value:
+        max_value_range = mid_value - min_value
+    elif mid_value < min_value < max_value:
+        max_value_range = max_value - mid_value
+    else:
+        max_value_range = 0
+    
+    max_left_txt_len = max([len(left_fmt.format(percent=v/base_value, value=v)) for v in group_values if v <= mid_value] or [0])
+    max_right_txt_len = max([len(right_fmt.format(percent=v/base_value, value=v)) for v in group_values if v >= mid_value] or [0])
+
+    left_text = left_fmt.format(percent=value/base_value, value=value)
+    right_text = right_fmt.format(percent=value/base_value, value=value)
+    
+    if min_value <= max_value < mid_value or mid_value > min_value >= max_value:
+        mid_char = "" # Don't show middle for bars with one-direction only bars
+    
+    max_bar_size = size - len(mid_char) - (max_left_txt_len + max_right_txt_len)
+    scale = max_bar_size / max_value_range
+
+    bar_size = round(abs(mid_value - value) * scale)
+    left_bar_size = bar_size - len(left_tip)
+    right_bar_size = bar_size - len(right_tip)
+
+    left_size = round((abs(mid_value - min_value)) * scale)
+    full_left_space_size = left_size + max_left_txt_len
+    left_space_size = (left_size - bar_size + (max_left_txt_len - len(left_text))) 
+
+    if min_value < mid_value < max_value:
+        if value < mid_value:
+            bar = left_tip + (left_char * left_bar_size)
+            return " " * left_space_size + left_text + bar + mid_char
+        else:
+            bar = right_char * right_bar_size + right_tip
+            return " " * full_left_space_size + mid_char + bar + right_text
+    else:
+        if min_value <= max_value < mid_value:
+            bar = left_tip + (left_char * left_bar_size)
+            return " " * left_space_size + left_text + bar
+        else:        
+            bar = right_char * right_bar_size + right_tip
+            return bar + right_text
 
 class TableFormatter:
 

@@ -1,0 +1,8 @@
+<snippet>
+    <content><![CDATA[
+${1:mybarfunc}(v, all) = bar(v, all, size = 32, base_value = sum(all), mid_value = 0, mid_char = "|", left_char="■", right_char="■", left_tip="", right_tip="", left_fmt="{percent:.2%} ", right_fmt=" {percent:.2%}")
+]]></content>
+    <tabTrigger>bar</tabTrigger>
+    <scope>source.mathilda</scope>
+    <description>Generates a custom bar function that can be used in tables</description>
+</snippet>
