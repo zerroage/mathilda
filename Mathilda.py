@@ -707,6 +707,9 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 elif func_name in globals():
                     func = globals().get(func_name)
                     func_title = func_name
+                elif func_name in globals()['__builtins__']:
+                    func = globals()['__builtins__'].get(func_name)
+                    func_title = func_name
 
                 if len(var_parts) > 2:                    
                     title = var_parts[2].strip('"\'')
