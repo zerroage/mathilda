@@ -792,8 +792,9 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                     tf.add_subtotal([fn['title'], invoke_table_fun(fn, [stack_data, all_table_data])])
                 tf.start_row_group()   
 
-        for fn in sub_total_funcs:
-            tf.add_subtotal([fn['title'], invoke_table_fun(fn, [non_stack_table_data, all_table_data])])
+        if len(non_stack_table_data) > 0:
+            for fn in sub_total_funcs:
+                tf.add_subtotal([fn['title'], invoke_table_fun(fn, [non_stack_table_data, all_table_data])])
 
         for fn in total_funcs:
             tf.add_total([fn['title'], invoke_table_fun(fn, [all_table_data])])
