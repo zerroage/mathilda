@@ -250,9 +250,10 @@ class ContextHolder:
                 return self.value
 
     class ResultsHolder:
-        def __init__(self, name, remark=""):
+        def __init__(self, name, remark="", fmt=""):
             self.name = name.strip()
             self.remark = remark.strip()
+            self.fmt = fmt.strip()
             self.items = []
 
         def get_item_values_list(self):
@@ -298,6 +299,9 @@ class ContextHolder:
 
         stack_name = self.stacks[-1].name if len(self.stacks) > 0 else ""
         section_name = self.sections[-1].name if len(self.sections) > 0 else ""
+        # Use stack formatting settings by default if not specified for the expression
+        stack_fmt = self.get_stack(stack_name).fmt
+        fmt = fmt or stack_fmt
         result = self.ResultItem(var_name, value, pretty_value, remark, fmt, stack_name, section_name)
 
         if var_name:
@@ -314,8 +318,8 @@ class ContextHolder:
             if len(self.sections) > 0 and push_to_stack:
                 self.sections[-1].items.append(result)
 
-    def start_new_stack(self, stack_name, remark):
-        self.stacks.append(self.ResultsHolder(stack_name, remark))
+    def start_new_stack(self, stack_name, remark, fmt=""):
+        self.stacks.append(self.ResultsHolder(stack_name, remark, fmt))
 
     def start_new_section(self, section_name):
         self.sections.append(self.ResultsHolder(section_name))
@@ -446,7 +450,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 # Sanitize stack name
                 m = re.match(r'[a-zA-Z][a-zA-Z0-9_]*', stack_name)
                 if m:
-                    self.context().start_new_stack(stack_name, remark)
+                    self.context().start_new_stack(stack_name, remark, fmt)
                     continue
 
             # Process "don't push to stack" directive: ?
@@ -641,7 +645,9 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 unit_txt = format(unit, 'U').replace(' ', '⋅')
             
         elif answer is not None:
-            if fmt and not callable(answer):
+            if type(answer) == list or type(answer) == tuple:
+                txt = str(answer)
+            elif fmt and not callable(answer):
                 txt = fmt.format(answer)
             else:    
                 txt = str(answer)
@@ -766,11 +772,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                             vals += [w]
                             args = [w, v.value, all_table_data]
                             extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
-                            tf.add_row(["", self.prettify("", "", w)] + extra_cols)
+                            tf.add_row(["", self.prettify("", "", w, v.fmt)] + extra_cols)
                     for fn in sub_total_funcs:
                         tf.add_subtotal([fn['title'], invoke_table_fun(fn, [vals, all_table_data])])
                     tf.start_row_group()
-                                                
                 else:    
                     args = [v.value, non_stack_table_data, all_table_data]
                     extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
@@ -779,7 +784,6 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 stack = self.context().get_stack(var_name)
                 stack_vars = stack.items
                 stack_data = [v.value for v in stack_vars if v.var_name or self.SHOW_UNASSIGNED_VALUES_IN_TABLE]
-                
                     
                 tf.start_row_group(stack.remark if stack.remark else var_name)
                 for v in stack_vars:
