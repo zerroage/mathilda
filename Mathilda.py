@@ -231,11 +231,10 @@ class ContextHolder:
         self.clear()
 
     class ResultItem:
-        def __init__(self, var_name="", value="", pretty_value="", remark="", fmt="", stack="", section="") -> None:
+        def __init__(self, var_name="", value="", remark="", fmt="", stack="", section="") -> None:
 
             self.var_name = var_name.strip() if var_name else None
             self.value = value
-            self.pretty_value = pretty_value.strip()
             self.remark = remark.strip()
             self.fmt = fmt.strip()
             self.stack = stack.strip()
@@ -285,7 +284,7 @@ class ContextHolder:
     def get_stack_vars(self, stack_name):
         return [v for v in self.history if v.stack == stack_name]
 
-    def store_result(self, var_name, value, pretty_value = "", remark="", fmt="", push_to_stack=True):
+    def store_result(self, var_name, value, remark="", fmt="", push_to_stack=True):
         # TODO: Don't put stacks on stack :-)
         # if not isinstance(value, list):
 
@@ -294,7 +293,7 @@ class ContextHolder:
         # Use stack formatting settings by default if not specified for the expression
         stack_fmt = self.get_stack(stack_name).fmt
         fmt = fmt or stack_fmt
-        result = self.ResultItem(var_name, value, pretty_value, remark, fmt, stack_name, section_name)
+        result = self.ResultItem(var_name, value, remark, fmt, stack_name, section_name)
 
         if var_name:
             self.vars_dict[var_name.strip()] = result
@@ -309,6 +308,8 @@ class ContextHolder:
                 self.stacks[-1].items.append(result)
             if len(self.sections) > 0 and push_to_stack:
                 self.sections[-1].items.append(result)
+        
+        return result
 
     def start_new_stack(self, stack_name, remark, fmt=""):
         self.stacks.append(self.ResultsHolder(stack_name, remark, fmt))
@@ -465,10 +466,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                     chars_inserted = self.generate_table(self.view, edit, line, expression.lstrip('!'))
                 else:
                     # Evaulate expression
-                    (var_name, answer) = self.evaluate(expression)
-                    pretty_answer = self.format_and_prettify(expression, answer, fmt)
+                    (var_name, answer) = self.evaluate(expression)                    
 
-                    self.context().store_result(var_name, answer, pretty_answer, remark, fmt, push_to_stack)
+                    result = self.context().store_result(var_name, answer, remark, fmt, push_to_stack)
+                    pretty_answer = self.format_and_prettify(expression, result.value, result.fmt)                    
                     chars_inserted = self.print_answer(self.view, edit, line, answer, pretty_answer)
 
             except Exception as ex:
