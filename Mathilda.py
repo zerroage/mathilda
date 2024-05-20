@@ -688,8 +688,8 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         extra_col_funcs = []
         sub_total_funcs = []
         total_funcs = []
-        for var_name in vars_list:
-            var_name = var_name.replace("{:", "{$") # mask formatting colon to avoid splitting the string in the wrong place
+        for idx, item in enumerate(vars_list):
+            var_name = item.replace("{:", "{$") # mask formatting colon to avoid splitting the string in the wrong place
             var_parts = re.split(':', var_name.strip())
             if len(var_parts) > 1:
                 func_type = var_parts[0].strip()
@@ -714,10 +714,10 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                     title = var_parts[2].strip('"\'')
                     title = title.replace("{$", "{:") # unmask colon and extract formatting if any
                     title, fmt = self.get_formatting(title, fmt)
-                    title = title
                     func_title = title or func_title
                 
                 if callable(func):
+                    del vars_list[idx]
                     numargs = 1 if inspect.isbuiltin(func) else len(inspect.getfullargspec(func).args)
                     
                     func_desc = {"type": func_type, "name": func_name, "title": func_title, "func": func, "fmt": fmt, "numargs": numargs}
@@ -747,43 +747,59 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                         all_table_data += [v.value]
         
         tf = TableFormatter(["Var", "Value"] + [col["title"] for col in extra_col_funcs] + ["Remark"])
-        for var_name in vars_list:
+        
+        for item in vars_list:
+            var_name = item.replace("{:", "{$") # mask formatting colon to avoid splitting the string in the wrong place
+            var_parts = re.split(':', var_name.strip())
+            if len(var_parts) > 1:
+                var_name = var_parts[0].strip()
+                title = var_parts[1].strip('"\'')
+                title = title.replace("{$", "{:") # unmask colon and extract formatting if any
+                title, fmt = self.get_formatting(title, fmt)
+            else:
+                title = ""
+                fmt = ""
+            
             var_name = var_name.strip()
             if var_name in self.context().get_vars():
                 v = self.context().get_vars()[var_name]
+                fmt = fmt or v.fmt
                 # Add subsection for lists
                 if type(v.value) == list:
-                    tf.start_row_group(v.remark if v.remark else var_name)
+                    tf.start_row_group(title or v.remark or var_name)
                     vals = []
                     for w in v.value:
-                        if type(w) == tuple and len(w) >= 2:
+                        if type(w) == tuple and len(w) > 1:
                             vals += [w[1]]                        
                             args = [w[1], [t[1] for t in v.value], all_table_data]
                             extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
-                            tf.add_row([self.format_and_prettify(w[0], w[0]), self.format_and_prettify(w[1], w[1])] + extra_cols + ([self.format_and_prettify(w[2], w[2])] if len(w) >= 3 else []))
+                            title, fmt = self.get_formatting(w[2] if len(w) > 2 else "", fmt)
+                            tf.add_row([self.format_and_prettify(w[0], w[0], fmt), 
+                                        self.format_and_prettify(w[1], w[1], fmt)] + extra_cols + ([self.format_and_prettify(w[2], w[2], fmt)] if len(w) > 2 else []))
                         else:
                             vals += [w]
                             args = [w, v.value, all_table_data]
                             extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
-                            tf.add_row(["", self.format_and_prettify("", w, v.fmt)] + extra_cols)
+                            tf.add_row(["", self.format_and_prettify(w, w, fmt)] + extra_cols)
                     for fn in sub_total_funcs:
                         tf.add_subtotal([fn['title'], invoke_table_fun(fn, [vals, all_table_data])])
                     tf.start_row_group()
                 else:    
                     args = [v.value, non_stack_table_data, all_table_data]
                     extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
-                    tf.add_row([v.var_name, self.format_and_prettify(v.value, v.value, v.fmt)] + extra_cols + [v.remark])
+                    tf.add_row([v.var_name, self.format_and_prettify(v.value, v.value, fmt)] + extra_cols + [title])
             elif self.context().has_stack(var_name):
                 stack = self.context().get_stack(var_name)
                 stack_vars = stack.items
                 stack_data = [v.value for v in stack_vars if v.var_name or self.SHOW_UNASSIGNED_VALUES_IN_TABLE]
-                    
-                tf.start_row_group(stack.remark if stack.remark else var_name)
+                stack_fmt = stack.fmt    
+                tf.start_row_group(title or stack.remark or var_name)
                 for v in stack_vars:
+                    item_fmt = fmt or v.fmt or stack_fmt
                     if v.var_name or self.SHOW_UNASSIGNED_VALUES_IN_TABLE:
                         args = [v.value, stack_data, all_table_data]
                         extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
-                        tf.add_row([v.var_name if v.var_name else "", self.format_and_prettify(v.value, v.value, v.fmt)] + extra_cols + [v.remark])
+                        tf.add_row([v.var_name if v.var_name else "", self.format_and_prettify(v.value, v.value, item_fmt)] + extra_cols + [v.remark])
                 
                 for fn in sub_total_funcs:
                     tf.add_subtotal([fn['title'], invoke_table_fun(fn, [stack_data, all_table_data])])
