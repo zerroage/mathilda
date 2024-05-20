@@ -474,7 +474,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 else:
                     # Evaulate expression
                     (var_name, answer) = self.evaluate(expression)
-                    pretty_answer = self.format_and_prettify(var_name, expression, answer, fmt)
+                    pretty_answer = self.format_and_prettify(expression, answer, fmt)
 
                     self.context().store_result(var_name, answer, pretty_answer, remark, fmt, push_to_stack)
                     chars_inserted = self.print_answer(self.view, edit, line, answer, pretty_answer)
@@ -623,7 +623,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         else:
             return None, expr.strip()
 
-    def format_and_prettify(self, var_name, expr, answer, fmt=""):
+    def format_and_prettify(self, expr, answer, fmt=""):
         from .natu.natu import core as core
         from .natu.natu import util as util
         
@@ -685,7 +685,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         def invoke_table_fun(fn, args):
             fn_args = args[:fn['numargs']]
             result = fn['func'].__call__(*fn_args)
-            return self.format_and_prettify("", "", result, fn['fmt'])
+            return self.format_and_prettify("", result, fn['fmt'])
 
         if not expr:
             return 0
@@ -767,12 +767,12 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                             vals += [w[1]]                        
                             args = [w[1], [t[1] for t in v.value], all_table_data]
                             extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
-                            tf.add_row([self.format_and_prettify("", "", w[0]), self.format_and_prettify("", "", w[1])] + extra_cols + ([self.format_and_prettify("", "", w[2])] if len(w) >= 3 else []))
+                            tf.add_row([self.format_and_prettify("", w[0]), self.format_and_prettify("", w[1])] + extra_cols + ([self.format_and_prettify("", w[2])] if len(w) >= 3 else []))
                         else:
                             vals += [w]
                             args = [w, v.value, all_table_data]
                             extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
-                            tf.add_row(["", self.format_and_prettify("", "", w, v.fmt)] + extra_cols)
+                            tf.add_row(["", self.format_and_prettify("", w, v.fmt)] + extra_cols)
                     for fn in sub_total_funcs:
                         tf.add_subtotal([fn['title'], invoke_table_fun(fn, [vals, all_table_data])])
                     tf.start_row_group()
