@@ -732,7 +732,6 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             else:
                 vars_list.append(item)
 
-        print(vars_list)
         # Collect all table values to be passed to aggregate functions
         all_table_data = []
         non_stack_table_data = []
