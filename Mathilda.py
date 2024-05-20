@@ -241,14 +241,6 @@ class ContextHolder:
             self.stack = stack.strip()
             self.section = section.strip()
 
-        def formatted_value(self):
-            if self.pretty_value:
-                return self.pretty_value
-            elif self.fmt:
-                return self.fmt.format(self.value)
-            else:
-                return self.value
-
     class ResultsHolder:
         def __init__(self, name, remark="", fmt=""):
             self.name = name.strip()
@@ -767,7 +759,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                             vals += [w[1]]                        
                             args = [w[1], [t[1] for t in v.value], all_table_data]
                             extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
-                            tf.add_row([self.format_and_prettify("", w[0]), self.format_and_prettify("", w[1])] + extra_cols + ([self.format_and_prettify("", w[2])] if len(w) >= 3 else []))
+                            tf.add_row([self.format_and_prettify(w[0], w[0]), self.format_and_prettify(w[1], w[1])] + extra_cols + ([self.format_and_prettify(w[2], w[2])] if len(w) >= 3 else []))
                         else:
                             vals += [w]
                             args = [w, v.value, all_table_data]
@@ -779,7 +771,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 else:    
                     args = [v.value, non_stack_table_data, all_table_data]
                     extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
-                    tf.add_row([v.var_name, v.formatted_value()] + extra_cols + [v.remark])
+                    tf.add_row([v.var_name, self.format_and_prettify(v.value, v.value, v.fmt)] + extra_cols + [v.remark])
             elif self.context().has_stack(var_name):
                 stack = self.context().get_stack(var_name)
                 stack_vars = stack.items
@@ -790,7 +782,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                     if v.var_name or self.SHOW_UNASSIGNED_VALUES_IN_TABLE:
                         args = [v.value, stack_data, all_table_data]
                         extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
-                        tf.add_row([v.var_name if v.var_name else "", v.formatted_value()] + extra_cols + [v.remark])
+                        tf.add_row([v.var_name if v.var_name else "", self.format_and_prettify(v.value, v.value, v.fmt)] + extra_cols + [v.remark])
                 
                 for fn in sub_total_funcs:
                     tf.add_subtotal([fn['title'], invoke_table_fun(fn, [stack_data, all_table_data])])
