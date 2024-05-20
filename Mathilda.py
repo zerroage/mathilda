@@ -683,12 +683,13 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         if not expr:
             return 0
 
-        vars_list = re.split('[,;]', expr)
+        table_items_list = re.split('[,;]', expr)
+        vars_list = []
         
         extra_col_funcs = []
         sub_total_funcs = []
         total_funcs = []
-        for idx, item in enumerate(vars_list):
+        for item in table_items_list:
             var_name = item.replace("{:", "{$") # mask formatting colon to avoid splitting the string in the wrong place
             var_parts = re.split(':', var_name.strip())
             if len(var_parts) > 1:
@@ -717,7 +718,6 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                     func_title = title or func_title
                 
                 if callable(func):
-                    del vars_list[idx]
                     numargs = 1 if inspect.isbuiltin(func) else len(inspect.getfullargspec(func).args)
                     
                     func_desc = {"type": func_type, "name": func_name, "title": func_title, "func": func, "fmt": fmt, "numargs": numargs}
@@ -727,7 +727,12 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                         sub_total_funcs += [func_desc]
                     elif func_type == "t" or func_type == "total":
                         total_funcs += [func_desc]
+                else:
+                    vars_list.append(item)
+            else:
+                vars_list.append(item)
 
+        print(vars_list)
         # Collect all table values to be passed to aggregate functions
         all_table_data = []
         non_stack_table_data = []
