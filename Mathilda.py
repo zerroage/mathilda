@@ -683,18 +683,29 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         if not expr:
             return 0
 
-        table_items_list = re.split('[,;]', expr)
-        vars_list = []
+        table_items_list = []
+        # Convert string to list of tuples
+        for item in re.split('[,;]', expr):
+            s = item.replace("{:", "{$") # mask formatting colon to avoid splitting the string in the wrong place
+            parts = re.split(':', s.strip())
+            parts.append("") # fake elements if the number of parts less than 2 or 3 
+            parts.append("") # fake elements if the number of parts less than 2 or 3 
+
+            # unmask colon and extract formatting if any 
+            tuple = (parts[0].strip().strip('"\'').replace("{$", "{:"), 
+                     parts[1].strip().strip('"\'').replace("{$", "{:"), 
+                     parts[2].strip().strip('"\'').replace("{$", "{:"))
+            table_items_list.append(tuple)
         
         extra_col_funcs = []
         sub_total_funcs = []
         total_funcs = []
-        for item in table_items_list:
-            var_name = item.replace("{:", "{$") # mask formatting colon to avoid splitting the string in the wrong place
-            var_parts = re.split(':', var_name.strip())
-            if len(var_parts) > 1:
-                func_type = var_parts[0].strip()
-                func_name = var_parts[1].strip()
+        vars_list = []
+        
+        for s1, s2, s3 in table_items_list:
+            if s2:
+                func_type = s1
+                func_name = s2
                 func_title = func_name
                 fmt = ""
                 func = None
@@ -711,9 +722,8 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                     func = globals()['__builtins__'].get(func_name)
                     func_title = func_name
 
-                if len(var_parts) > 2:                    
-                    title = var_parts[2].strip('"\'')
-                    title = title.replace("{$", "{:") # unmask colon and extract formatting if any
+                if s3:                    
+                    title = s3
                     title, fmt = self.get_formatting(title, fmt)
                     func_title = title or func_title
                 
@@ -728,15 +738,17 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                     elif func_type == "t" or func_type == "total":
                         total_funcs += [func_desc]
                 else:
-                    vars_list.append(item)
+                    vars_list.append((s1, s2, s3))
             else:
-                vars_list.append(item)
+                vars_list.append((s1, s2, s3))
 
         # Collect all table values to be passed to aggregate functions
         all_table_data = []
         non_stack_table_data = []
-        for var_name in vars_list:
-            var_name = var_name.strip()
+
+        # FIXME: split items into parts!!! Otherwise elements like "var:description" not added to the all_table_data
+
+        for var_name, s2, s3 in vars_list:
             if var_name in self.context().get_vars():
                 v = self.context().get_vars()[var_name]
                 if type(v.value) == list:
@@ -752,19 +764,15 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         
         tf = TableFormatter(["Var", "Value"] + [col["title"] for col in extra_col_funcs] + ["Remark"])
         
-        for item in vars_list:
-            var_name = item.replace("{:", "{$") # mask formatting colon to avoid splitting the string in the wrong place
-            var_parts = re.split(':', var_name.strip())
-            if len(var_parts) > 1:
-                var_name = var_parts[0].strip()
-                title = var_parts[1].strip('"\'')
-                title = title.replace("{$", "{:") # unmask colon and extract formatting if any
+        for s1, s2, s3 in vars_list:
+            var_name = s1
+            if s2:
+                title = s2
                 title, fmt = self.get_formatting(title, fmt)
             else:
                 title = ""
                 fmt = ""
             
-            var_name = var_name.strip()
             if var_name in self.context().get_vars():
                 v = self.context().get_vars()[var_name]
                 fmt = fmt or v.fmt
