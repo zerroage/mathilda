@@ -692,10 +692,9 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             parts.append("") # fake elements if the number of parts less than 2 or 3 
 
             # unmask colon and extract formatting if any 
-            tuple = (parts[0].strip().strip('"\'').replace("{$", "{:"), 
-                     parts[1].strip().strip('"\'').replace("{$", "{:"), 
-                     parts[2].strip().strip('"\'').replace("{$", "{:"))
-            table_items_list.append(tuple)
+            table_items_list.append((parts[0].strip().strip('"\'').replace("{$", "{:"), 
+                                     parts[1].strip().strip('"\'').replace("{$", "{:"), 
+                                     parts[2].strip().strip('"\'').replace("{$", "{:")))
         
         extra_col_funcs = []
         sub_total_funcs = []
