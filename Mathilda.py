@@ -766,12 +766,13 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         
         for s1, s2, s3 in vars_list:
             var_name = s1
+            title = ""
+            remark = ""
+            fmt = ""
             if s2:
-                title = s2
-                title, fmt = self.get_formatting(title, fmt)
-            else:
-                title = ""
-                fmt = ""
+                title, fmt = self.get_formatting(s2, fmt)
+            if s3:
+                remark, fmt = self.get_formatting(s3, fmt)
             
             if var_name in self.context().get_vars():
                 v = self.context().get_vars()[var_name]
@@ -799,7 +800,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 else:    
                     args = [v.value, non_stack_table_data, all_table_data]
                     extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
-                    tf.add_row([v.var_name, self.format_and_prettify(v.value, v.value, fmt)] + extra_cols + [title])
+                    tf.add_row([title or v.var_name, self.format_and_prettify(v.value, v.value, fmt)] + extra_cols + [remark])
             elif self.context().has_stack(var_name):
                 stack = self.context().get_stack(var_name)
                 stack_vars = stack.items
