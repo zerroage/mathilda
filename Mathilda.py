@@ -799,7 +799,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                 else:    
                     args = [v.value, non_stack_table_data, all_table_data]
                     extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
-                    tf.add_row([title or v.var_name, self.format_and_prettify(v.value, v.value, fmt)] + extra_cols + [remark])
+                    tf.add_row([title or v.var_name, self.format_and_prettify(v.value, v.value, fmt)] + extra_cols + [remark or v.remark])
             elif self.context().has_stack(var_name):
                 stack = self.context().get_stack(var_name)
                 stack_vars = stack.items
