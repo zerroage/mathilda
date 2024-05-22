@@ -723,8 +723,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                     func_title = func_name
 
                 if s3:                    
-                    title = s3
-                    title, fmt = self.get_formatting(title, fmt)
+                    title, fmt = self.get_formatting(s3, fmt)
                     func_title = title or func_title
                 
                 if callable(func):
