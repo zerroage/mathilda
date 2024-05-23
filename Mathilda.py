@@ -116,7 +116,7 @@ def bar(value = 0, group_values = [], all_values=[],
     elif mid_value < min_value < max_value:
         max_value_range = max_value - mid_value
     else:
-        max_value_range = 0
+        return ""
     
     max_left_txt_len = max([len(left_fmt.format(percent=v/base_value, value=v)) for v in group_values if v <= mid_value] or [0])
     max_right_txt_len = max([len(right_fmt.format(percent=v/base_value, value=v)) for v in group_values if v >= mid_value] or [0])
@@ -786,7 +786,9 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
                             extra_cols = [invoke_table_fun(fn, args) for fn in extra_col_funcs]
                             title, fmt = self.get_formatting(w[2] if len(w) > 2 else "", fmt)
                             tf.add_row([self.format_and_prettify(w[0], w[0], fmt), 
-                                        self.format_and_prettify(w[1], w[1], fmt)] + extra_cols + ([w[2]] if len(w) > 2 else []))
+                                        self.format_and_prettify(w[1], w[1], fmt)]
+                                       + extra_cols 
+                                       + ([w[2]] if len(w) > 2 else []))
                         else:
                             vals += [w]
                             args = [w, v.value, all_table_data]
