@@ -187,11 +187,20 @@ class TableFormatter:
         
         columns = max([len(r) for r in all_rows])
         column_widths = [max([len(str(r[c])) for r in all_rows if len(r) > c]) for c in range(columns)]
+        total_width = sum(column_widths) + 3 * (columns - 1) # two spaces and col.separator between colulmns
+        group_name_max_width = max([len(k) for k in self.row_groups.keys()])
+        
+        # Adjust table width (by increasing column widths) for very long group names
+        if group_name_max_width > total_width:
+            inc, last_inc = divmod(group_name_max_width - total_width, columns)
+            
+            column_widths = [w + inc for w in column_widths]
+            column_widths[0] += last_inc
 
         top_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|\n"
         divider = "|-" + "-|-".join(['-' * w for w in column_widths]) + "-|\n"
         row_fmt = "| " + " | ".join(['{:%s}' % w for w in column_widths]) + " |\n"
-        sub_fmt = "| " + "{:%s}" % (sum(column_widths) + 3 * (columns - 1)) + " |\n" # two spaces and col.separator between colulmns
+        sub_fmt = "| " + "{:%s}" % (total_width) + " |\n"
         mid_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|\n"   # Ending new line will be inserted separately
         bot_div = "|-" + "---".join(['-' * w for w in column_widths]) + "-|"   # Ending new line will be inserted separately
 
