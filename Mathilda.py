@@ -656,7 +656,7 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
             else:    
                 txt = str(answer)
         
-        if self.PRETTIFY_EXPONENT:
+        if self.PRETTIFY_EXPONENT and re.match(r"\d[eE]-?\d", txt):
             txt = util.format_e(txt, 'U').replace('✕', '⋅')
         
         if "<function <lambda" in txt:
