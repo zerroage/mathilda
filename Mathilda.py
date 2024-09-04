@@ -98,6 +98,8 @@ def bar(value = 0, group_values = [], all_values=[],
         mid_char = "|", left_char="■", right_char="■", left_tip="", right_tip="",
         left_fmt="{percent:.2%} ", right_fmt=" {percent:.2%}"):
 
+    # Take only numeric values from tuples and ignore the rest
+    group_values = [v[1] if type(v) == tuple else v for v in group_values]
     if isnan(base_value):
         base_value = max([abs(v) for v in group_values])
 
