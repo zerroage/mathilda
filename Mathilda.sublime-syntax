@@ -60,15 +60,41 @@ contexts:
     - match: "^\\|[\\-\\|]+\\|$"
       scope: markup.raw.block
 
-    - match: "^\\|(.*?)\\|(.*)\\|(.*)\\|$"
-      scope: markup.raw.block 
-      captures:
-        1: markup.raw.block string 
-        2: markup.raw.block constant.numeric
-        3: markup.raw.block comment
+    - match: '^\|'
+      scope: markup.raw.block
+      embed: table-first-column
+      escape: '\|$'
+      embed_scope: markup.raw.block
+   
+  table-first-column:
 
-    - match: "^\\|(.*)\\|$"
+    - match: "^[^|]"
       scope: markup.raw.block 
       captures:
         1: markup.heading
-   
+
+    - match: '\-+'
+      scope: markup.heading
+      pop: true
+
+    - match: '([^|]+?)(\|)'
+      captures:
+        1: string
+        2: markup.raw.block
+      push: table-rest-columns
+
+  table-rest-columns:
+    - match: '(\|)([^|]+?)$'
+      captures:
+        1: markup.raw.block
+        2: comment
+      pop: 2
+
+    - match: '([■░▒▓─━═┈┉▬╱╲╳]*)([|│┃┆┊┋])?([■░▒▓─━═┈┉▬╱╲╳]*)'
+      captures:
+        3: markup.inserted
+        1: markup.deleted
+        2: markup.raw.block
+
+    - match: '([+\-]?\d*?\.?\d*?)(e-?\d+)?'
+      scope: constant.numeric
