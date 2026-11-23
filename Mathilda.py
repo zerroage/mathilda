@@ -847,24 +847,6 @@ class RecalculateWorksheetCommand(MathildaBaseCommand):
         return len(table)
 
 
-class ToggleCommentCommand(MathildaBaseCommand):
-
-    def run(self, edit):
-        for region in self.view.sel():
-            line = self.view.line(region)
-            line_contents = self.view.substr(line)
-
-            self.view.sel().clear()
-            self.view.sel().add(line.end() + 1)
-
-            if line_contents.startswith(('#', ';')):
-                # uncomment
-                self.view.replace(edit, line, re.sub('^[#;]+\\s*', '', line_contents))
-            else:
-                # comment
-                self.view.insert(edit, line.begin(), '; ')
-
-
 class ListVarsCommand(MathildaBaseCommand):
 
     def run(self, edit):
